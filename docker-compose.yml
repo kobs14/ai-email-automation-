@@ -1,0 +1,200 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 15 Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: cleaning_email_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cleaning_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cleaning_password}
+      POSTGRES_DB: ${POSTGRES_DB:-cleaning_email_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cleaning_user} -d ${POSTGRES_DB:-cleaning_email_db}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - cleaning_network
+
+  # Redis 7 Cache/Queue
+  redis:
+    image: redis:7-alpine
+    container_name: cleaning_email_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - cleaning_network
+
+  # Celery Worker for email processing
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cleaning_email_celery_worker
+    restart: unless-stopped
+    command: celery -A services.celery_app worker --loglevel=info --concurrency=2 --queues=default,email_fetch,email_process,email_send,calendar
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-cleaning_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cleaning_password}
+      - POSTGRES_DB=${POSTGRES_DB:-cleaning_email_db}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CALENDAR_ENABLED=${CALENDAR_ENABLED:-false}
+      - GOOGLE_CALENDAR_ID=${GOOGLE_CALENDAR_ID:-primary}
+      - CALENDAR_DEFAULT_DURATION=${CALENDAR_DEFAULT_DURATION:-3.0}
+      - CALENDAR_BUFFER_MINUTES=${CALENDAR_BUFFER_MINUTES:-30}
+      - CALENDAR_TIMEZONE=${CALENDAR_TIMEZONE:-America/New_York}
+    volumes:
+      - .:/app
+      - ./credentials:/app/credentials
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cleaning_network
+
+  # Celery Beat scheduler for periodic tasks
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cleaning_email_celery_beat
+    restart: unless-stopped
+    command: celery -A services.celery_app beat --loglevel=info
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-cleaning_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cleaning_password}
+      - POSTGRES_DB=${POSTGRES_DB:-cleaning_email_db}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CALENDAR_ENABLED=${CALENDAR_ENABLED:-false}
+      - GOOGLE_CALENDAR_ID=${GOOGLE_CALENDAR_ID:-primary}
+      - CALENDAR_TIMEZONE=${CALENDAR_TIMEZONE:-America/New_York}
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cleaning_network
+
+  # Telegram Bot for notifications and approvals
+  telegram_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cleaning_email_telegram_bot
+    restart: unless-stopped
+    command: python -m services.telegram.bot
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-cleaning_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cleaning_password}
+      - POSTGRES_DB=${POSTGRES_DB:-cleaning_email_db}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cleaning_network
+
+  # Flask REST API Backend
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: cleaning_email_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-cleaning_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cleaning_password}
+      - POSTGRES_DB=${POSTGRES_DB:-cleaning_email_db}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-dev-secret-key-change-me}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-jwt-secret-change-me}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - APP_ENV=${APP_ENV:-development}
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - cleaning_network
+  # React Frontend (Vite + nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:5000}
+    container_name: cleaning_email_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - cleaning_network
+
+volumes:
+  postgres_data:
+    name: cleaning_email_postgres_data
+  redis_data:
+    name: cleaning_email_redis_data
+
+networks:
+  cleaning_network:
+    name: cleaning_email_network
+    driver: bridge

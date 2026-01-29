@@ -1,0 +1,58 @@
+# =============================================================================
+# Cleaning Service Email Automation - Python Dependencies
+# =============================================================================
+# Install with: pip install -r requirements.txt
+# Note: The backend/ and frontend/ services have their own requirements/package
+# files installed via their respective Dockerfiles.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Core Dependencies
+# -----------------------------------------------------------------------------
+
+# Anthropic Claude API client
+anthropic==0.76.0
+
+# PostgreSQL adapter with connection pooling
+psycopg2-binary==2.9.9
+
+# Environment variable management
+python-dotenv==1.0.0
+
+# Redis client for caching and task queue
+redis==5.0.1
+
+# Celery task queue
+celery>=5.3.0
+
+# -----------------------------------------------------------------------------
+# Google API Integration
+# -----------------------------------------------------------------------------
+
+# Gmail API client
+google-api-python-client>=2.111.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+
+# -----------------------------------------------------------------------------
+# Telegram Bot
+# -----------------------------------------------------------------------------
+
+python-telegram-bot>=21.0
+
+# -----------------------------------------------------------------------------
+# Utilities
+# -----------------------------------------------------------------------------
+
+# Date parsing for natural language dates
+python-dateutil>=2.8.0
+
+# Type checking support
+typing-extensions>=4.10.0
+
+# -----------------------------------------------------------------------------
+# Testing
+# -----------------------------------------------------------------------------
+
+pytest>=7.4.0
+pytest-cov>=4.1.0

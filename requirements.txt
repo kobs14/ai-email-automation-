@@ -14,7 +14,7 @@
 anthropic==0.76.0
 
 # PostgreSQL adapter with connection pooling
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.11
 
 # Environment variable management
 python-dotenv==1.0.0

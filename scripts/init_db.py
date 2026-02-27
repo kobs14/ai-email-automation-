@@ -21,10 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from config.settings import settings
 from database.migrations.migrate import MigrationRunner
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -78,14 +75,8 @@ def initialize_database(status_only: bool = False) -> bool:
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description='Initialize the database schema'
-    )
-    parser.add_argument(
-        '--status', '-s',
-        action='store_true',
-        help='Show migration status only'
-    )
+    parser = argparse.ArgumentParser(description="Initialize the database schema")
+    parser.add_argument("--status", "-s", action="store_true", help="Show migration status only")
 
     args = parser.parse_args()
 
@@ -110,5 +101,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

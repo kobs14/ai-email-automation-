@@ -4,8 +4,6 @@ Unit tests for configuration and settings.
 Tests the Settings classes from config/settings.py
 """
 
-import pytest
-import os
 import sys
 from pathlib import Path
 
@@ -18,12 +16,12 @@ class TestDatabaseSettings:
     def test_default_values(self, monkeypatch):
         """Test default values when environment variables not set."""
         # Clear relevant env vars
-        for var in ["POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_USER",
-                    "POSTGRES_PASSWORD", "POSTGRES_DB"]:
+        for var in ["POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB"]:
             monkeypatch.delenv(var, raising=False)
 
         # Import fresh to get defaults
         from config.settings import DatabaseSettings
+
         db = DatabaseSettings()
 
         assert db.host == "localhost"
@@ -40,6 +38,7 @@ class TestDatabaseSettings:
         monkeypatch.setenv("POSTGRES_DB", "custom_db")
 
         from config.settings import DatabaseSettings
+
         db = DatabaseSettings()
 
         assert db.host == "db.example.com"
@@ -57,6 +56,7 @@ class TestDatabaseSettings:
         monkeypatch.setenv("POSTGRES_DB", "testdb")
 
         from config.settings import DatabaseSettings
+
         db = DatabaseSettings()
 
         expected = "postgresql://testuser:testpass@localhost:5432/testdb"
@@ -71,6 +71,7 @@ class TestDatabaseSettings:
         monkeypatch.setenv("POSTGRES_DB", "testdb")
 
         from config.settings import DatabaseSettings
+
         db = DatabaseSettings()
 
         assert "host=localhost" in db.dsn
@@ -89,6 +90,7 @@ class TestRedisSettings:
             monkeypatch.delenv(var, raising=False)
 
         from config.settings import RedisSettings
+
         redis = RedisSettings()
 
         assert redis.host == "localhost"
@@ -104,6 +106,7 @@ class TestRedisSettings:
         monkeypatch.delenv("REDIS_PASSWORD", raising=False)
 
         from config.settings import RedisSettings
+
         redis = RedisSettings()
 
         assert redis.url == "redis://localhost:6379/0"
@@ -116,6 +119,7 @@ class TestRedisSettings:
         monkeypatch.setenv("REDIS_PASSWORD", "redispass")
 
         from config.settings import RedisSettings
+
         redis = RedisSettings()
 
         assert redis.url == "redis://:redispass@redis.example.com:6380/1"
@@ -129,6 +133,7 @@ class TestClaudeSettings:
         monkeypatch.delenv("CLAUDE_MODEL", raising=False)
 
         from config.settings import ClaudeSettings
+
         claude = ClaudeSettings()
 
         assert claude.model == "claude-sonnet-4-20250514"
@@ -138,6 +143,7 @@ class TestClaudeSettings:
         monkeypatch.setenv("CLAUDE_MODEL", "claude-opus-4-20250514")
 
         from config.settings import ClaudeSettings
+
         claude = ClaudeSettings()
 
         assert claude.model == "claude-opus-4-20250514"
@@ -147,6 +153,7 @@ class TestClaudeSettings:
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-valid-key-12345")
 
         from config.settings import ClaudeSettings
+
         claude = ClaudeSettings()
 
         assert claude.validate() is True
@@ -156,6 +163,7 @@ class TestClaudeSettings:
         monkeypatch.setenv("ANTHROPIC_API_KEY", "")
 
         from config.settings import ClaudeSettings
+
         claude = ClaudeSettings()
 
         assert claude.validate() is False
@@ -165,6 +173,7 @@ class TestClaudeSettings:
         monkeypatch.setenv("ANTHROPIC_API_KEY", "your_anthropic_api_key_here")
 
         from config.settings import ClaudeSettings
+
         claude = ClaudeSettings()
 
         assert claude.validate() is False
@@ -174,6 +183,7 @@ class TestClaudeSettings:
         monkeypatch.delenv("CLAUDE_MAX_TOKENS", raising=False)
 
         from config.settings import ClaudeSettings
+
         claude = ClaudeSettings()
 
         assert claude.max_tokens == 4096
@@ -183,6 +193,7 @@ class TestClaudeSettings:
         monkeypatch.setenv("CLAUDE_MAX_TOKENS", "8192")
 
         from config.settings import ClaudeSettings
+
         claude = ClaudeSettings()
 
         assert claude.max_tokens == 8192
@@ -197,6 +208,7 @@ class TestAppSettings:
             monkeypatch.delenv(var, raising=False)
 
         from config.settings import AppSettings
+
         app = AppSettings()
 
         assert app.env == "development"
@@ -209,6 +221,7 @@ class TestAppSettings:
         monkeypatch.setenv("DEBUG", "false")
 
         from config.settings import AppSettings
+
         app = AppSettings()
 
         assert app.env == "production"
@@ -221,6 +234,7 @@ class TestAppSettings:
         monkeypatch.setenv("APP_ENV", "development")
 
         from config.settings import AppSettings
+
         app = AppSettings()
 
         assert app.is_development is True
@@ -232,6 +246,7 @@ class TestAppSettings:
             monkeypatch.setenv("DEBUG", value)
 
             from config.settings import AppSettings
+
             app = AppSettings()
 
             assert app.debug is True, f"DEBUG={value} should be True"
@@ -242,6 +257,7 @@ class TestAppSettings:
             monkeypatch.setenv("DEBUG", value)
 
             from config.settings import AppSettings
+
             app = AppSettings()
 
             assert app.debug is False, f"DEBUG={value} should be False"
@@ -256,6 +272,7 @@ class TestSettingsValidation:
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-valid-key")
 
         from config.settings import Settings
+
         settings = Settings()
 
         assert settings.validate() is True
@@ -266,6 +283,7 @@ class TestSettingsValidation:
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-valid-key")
 
         from config.settings import Settings
+
         settings = Settings()
 
         assert settings.validate() is False
@@ -276,6 +294,7 @@ class TestSettingsValidation:
         monkeypatch.setenv("ANTHROPIC_API_KEY", "")
 
         from config.settings import Settings
+
         settings = Settings()
 
         assert settings.validate() is False
@@ -286,6 +305,7 @@ class TestSettingsValidation:
         monkeypatch.setenv("ANTHROPIC_API_KEY", "")
 
         from config.settings import Settings
+
         settings = Settings()
 
         assert settings.validate() is False
@@ -296,7 +316,7 @@ class TestGetSettings:
 
     def test_get_settings_returns_settings_instance(self):
         """Test that get_settings returns a Settings instance."""
-        from config.settings import get_settings, Settings
+        from config.settings import Settings, get_settings
 
         settings = get_settings()
 
@@ -304,7 +324,8 @@ class TestGetSettings:
 
     def test_get_settings_returns_same_instance(self):
         """Test that get_settings returns the global instance."""
-        from config.settings import get_settings, settings as global_settings
+        from config.settings import get_settings
+        from config.settings import settings as global_settings
 
         settings = get_settings()
 

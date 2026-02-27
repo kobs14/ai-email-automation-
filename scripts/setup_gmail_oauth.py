@@ -22,14 +22,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config.settings import settings
+from services.calendar.auth import CALENDAR_SCOPES
 from services.gmail.auth import GmailAuth
 from services.gmail.client import GmailClient
-from services.calendar.auth import CALENDAR_SCOPES
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -39,8 +36,8 @@ def main():
     print("  Gmail OAuth Setup")
     print("=" * 60)
 
-    credentials_path = Path('credentials/google_credentials.json')
-    token_path = Path('credentials/gmail_token.json')
+    credentials_path = Path("credentials/google_credentials.json")
+    token_path = Path("credentials/gmail_token.json")
 
     # Check for credentials file
     if not credentials_path.exists():
@@ -58,16 +55,16 @@ def main():
     use_calendar = settings.calendar.is_configured()
     if use_calendar:
         scopes = CALENDAR_SCOPES
-        print(f"✓ Calendar integration enabled - requesting Gmail + Calendar scopes")
+        print("✓ Calendar integration enabled - requesting Gmail + Calendar scopes")
     else:
         scopes = None  # Use default Gmail-only scopes
-        print(f"  Calendar integration not enabled (set CALENDAR_ENABLED=true to include)")
+        print("  Calendar integration not enabled (set CALENDAR_ENABLED=true to include)")
 
     # Check if already authorized
     if token_path.exists():
         print(f"✓ Token file exists: {token_path}")
         response = input("\nRe-authorize? This will replace the existing token. (y/N): ")
-        if response.lower() != 'y':
+        if response.lower() != "y":
             print("\nKeeping existing authorization.")
 
             # Test the connection
@@ -122,8 +119,8 @@ def main():
             # Get labels
             print("\nAvailable labels:")
             labels = client.get_labels()
-            system_labels = [l for l in labels if l.get('type') == 'system']
-            user_labels = [l for l in labels if l.get('type') == 'user']
+            system_labels = [lbl for lbl in labels if lbl.get("type") == "system"]
+            user_labels = [lbl for lbl in labels if lbl.get("type") == "user"]
 
             print(f"  System labels: {len(system_labels)}")
             for label in user_labels[:5]:
@@ -154,5 +151,5 @@ def main():
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

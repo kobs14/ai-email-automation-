@@ -1,0 +1,98 @@
+# =============================================================================
+# Docker Compose - Backup Services
+#
+# Extends the main docker-compose.yml with backup containers.
+# These services use profiles and do NOT start by default.
+#
+# Usage:
+#   # Run PostgreSQL backup
+#   docker compose -f docker-compose.yml -f docker-compose.backup.yml \
+#     run --rm pg-backup
+#
+#   # Run Redis backup
+#   docker compose -f docker-compose.yml -f docker-compose.backup.yml \
+#     run --rm redis-backup
+#
+# Crontab example:
+#   0 * * * *  cd /path/to/project && docker compose -f docker-compose.yml -f docker-compose.backup.yml run --rm pg-backup
+#   0 3 * * *  cd /path/to/project && docker compose -f docker-compose.yml -f docker-compose.backup.yml run --rm redis-backup
+# =============================================================================
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL backup (hourly via cron)
+  # ---------------------------------------------------------------------------
+  pg-backup:
+    image: postgres:15-alpine
+    profiles: [backup]
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-cleaning_user}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-cleaning_password}
+      PGDATABASE: ${POSTGRES_DB:-cleaning_email_db}
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: "7"
+    volumes:
+      - ./scripts/backup:/scripts:ro
+      - backup_data:/backups
+    entrypoint: ["/bin/sh", "/scripts/pg_backup.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cleaning_network
+
+  # ---------------------------------------------------------------------------
+  # Redis backup (daily via cron)
+  # ---------------------------------------------------------------------------
+  redis-backup:
+    image: redis:7-alpine
+    profiles: [backup]
+    environment:
+      BACKUP_DIR: /backups
+    volumes:
+      - backup_data:/backups
+      - redis_data:/data:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        TIMESTAMP=$$(date +%Y%m%d_%H%M%S)
+        echo "[$$TIMESTAMP] Starting Redis backup..."
+
+        # Trigger a background save
+        redis-cli -h redis BGSAVE || true
+        sleep 2
+
+        # Copy the RDB file
+        if [ -f /data/dump.rdb ]; then
+          cp /data/dump.rdb /backups/redis_$${TIMESTAMP}.rdb
+          echo "[$$TIMESTAMP] Redis backup created: /backups/redis_$${TIMESTAMP}.rdb"
+          ls -lh /backups/redis_$${TIMESTAMP}.rdb
+        else
+          echo "[$$TIMESTAMP] WARNING: No dump.rdb found in /data"
+        fi
+
+        # Cleanup old Redis backups (older than 7 days)
+        find /backups -name "redis_*.rdb" -type f -mtime +7 -delete 2>/dev/null || true
+        echo "[$$TIMESTAMP] Redis backup complete"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - cleaning_network
+
+volumes:
+  backup_data:
+    name: cleaning_email_backup_data
+  # Reference existing volumes from main compose file
+  redis_data:
+    external: true
+    name: cleaning_email_redis_data
+
+networks:
+  cleaning_network:
+    external: true
+    name: cleaning_email_network

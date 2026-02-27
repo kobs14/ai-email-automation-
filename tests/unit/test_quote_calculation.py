@@ -4,25 +4,24 @@ Unit tests for quote calculation logic.
 Tests the calculate_quote function from services/claude/processor.py
 """
 
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # Check if anthropic library is available (needed by claude module)
 try:
     from services.claude.processor import calculate_quote
+
     CLAUDE_AVAILABLE = True
 except ImportError:
     CLAUDE_AVAILABLE = False
     calculate_quote = None
 
 # Skip entire module if claude module is not available
-pytestmark = pytest.mark.skipif(
-    not CLAUDE_AVAILABLE,
-    reason="Claude module dependencies not installed (anthropic)"
-)
+pytestmark = pytest.mark.skipif(not CLAUDE_AVAILABLE, reason="Claude module dependencies not installed (anthropic)")
 
 
 class TestCalculateQuoteBasic:
@@ -262,16 +261,17 @@ class TestCalculateQuoteInvalidInputs:
 class TestCalculateQuoteServiceTypes:
     """Test all service type multipliers."""
 
-    @pytest.mark.parametrize("service_type,expected_multiplier", [
-        ("standard", 1.0),
-        ("deep_clean", 1.5),
-        ("move_in", 1.6),
-        ("move_out", 1.8),
-        ("post_construction", 2.0),
-    ])
-    def test_service_multipliers(
-        self, service_type, expected_multiplier, pricing_rules, service_multipliers
-    ):
+    @pytest.mark.parametrize(
+        "service_type,expected_multiplier",
+        [
+            ("standard", 1.0),
+            ("deep_clean", 1.5),
+            ("move_in", 1.6),
+            ("move_out", 1.8),
+            ("post_construction", 2.0),
+        ],
+    )
+    def test_service_multipliers(self, service_type, expected_multiplier, pricing_rules, service_multipliers):
         """Test each service type applies correct multiplier."""
         entities = [
             {"type": "property_type", "value": "house", "confidence": 0.95},
@@ -288,9 +288,7 @@ class TestCalculateQuoteServiceTypes:
         expected_total = 185.0 * expected_multiplier
         assert result["total"] == expected_total
 
-    def test_unknown_service_type_defaults_to_standard(
-        self, pricing_rules, service_multipliers
-    ):
+    def test_unknown_service_type_defaults_to_standard(self, pricing_rules, service_multipliers):
         """Test that unknown service type defaults to 1.0x multiplier."""
         entities = [
             {"type": "property_type", "value": "house", "confidence": 0.95},
@@ -322,18 +320,12 @@ class TestCalculateQuoteAdjustments:
         assert len(result["adjustments"]) >= 2
 
         # Check bedroom adjustment exists
-        bedroom_adj = next(
-            (a for a in result["adjustments"] if "bedroom" in a["description"].lower()),
-            None
-        )
+        bedroom_adj = next((a for a in result["adjustments"] if "bedroom" in a["description"].lower()), None)
         assert bedroom_adj is not None
         assert bedroom_adj["amount"] == 75  # 3 * 25
 
         # Check bathroom adjustment exists
-        bathroom_adj = next(
-            (a for a in result["adjustments"] if "bathroom" in a["description"].lower()),
-            None
-        )
+        bathroom_adj = next((a for a in result["adjustments"] if "bathroom" in a["description"].lower()), None)
         assert bathroom_adj is not None
         assert bathroom_adj["amount"] == 30  # 2 * 15
 
@@ -350,8 +342,7 @@ class TestCalculateQuoteAdjustments:
 
         assert result is not None
         expected_subtotal = result["base_price"] + sum(
-            a["amount"] for a in result["adjustments"]
-            if "service" not in a["description"].lower()
+            a["amount"] for a in result["adjustments"] if "service" not in a["description"].lower()
         )
         assert result["subtotal"] == expected_subtotal
 

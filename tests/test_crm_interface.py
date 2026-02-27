@@ -8,12 +8,13 @@ Covers:
     - CRM exception hierarchy.
 """
 
-from datetime import datetime
 import sys
+from datetime import datetime
 from unittest.mock import patch
 
 import pytest
 
+from config.settings import CRMSettings
 from services.crm import (
     BaseCRMProvider,
     CRMConnectionError,
@@ -27,7 +28,6 @@ from services.crm import (
     NullCRMProvider,
     get_crm_provider,
 )
-from config.settings import CRMSettings
 
 # The config package re-exports ``settings`` as an attribute, shadowing the
 # submodule name.  Use sys.modules to get the real module so patch.object works.
@@ -37,6 +37,7 @@ _settings_module = sys.modules["config.settings"]
 # =========================================================================
 # NullCRMProvider — every method returns safe defaults
 # =========================================================================
+
 
 class TestNullCRMProviderCustomerOps:
     """Customer-related no-op behaviour."""
@@ -61,9 +62,7 @@ class TestNullCRMProviderCustomerOps:
         assert result.crm_id == "crm-123"
 
     def test_get_or_create_customer_returns_stub_and_false(self) -> None:
-        customer, created = self.provider.get_or_create_customer(
-            "test@example.com", defaults={"name": "Test"}
-        )
+        customer, created = self.provider.get_or_create_customer("test@example.com", defaults={"name": "Test"})
         assert isinstance(customer, CRMCustomer)
         assert customer.email == "test@example.com"
         assert created is False
@@ -95,9 +94,7 @@ class TestNullCRMProviderDealOps:
         self.provider = NullCRMProvider()
 
     def test_create_deal_returns_input(self) -> None:
-        deal = CRMDeal(
-            customer_id="cust-1", title="Deep clean quote", stage="new"
-        )
+        deal = CRMDeal(customer_id="cust-1", title="Deep clean quote", stage="new")
         result = self.provider.create_deal(deal)
         assert result is deal
 
@@ -132,6 +129,7 @@ class TestNullCRMProviderIsSubclass:
 # get_crm_provider() factory
 # =========================================================================
 
+
 class TestGetCRMProviderFactory:
     """Factory returns the correct provider based on settings."""
 
@@ -163,6 +161,7 @@ class TestGetCRMProviderFactory:
 # =========================================================================
 # CRM data models
 # =========================================================================
+
 
 class TestCRMCustomerModel:
     """CRMCustomer dataclass instantiation."""
@@ -260,6 +259,7 @@ class TestCRMDealModel:
 # CRM exception hierarchy
 # =========================================================================
 
+
 class TestCRMExceptions:
     """Exception classes form the expected hierarchy."""
 
@@ -285,6 +285,7 @@ class TestCRMExceptions:
 # =========================================================================
 # CRMSettings dataclass
 # =========================================================================
+
 
 class TestCRMSettings:
     """CRMSettings configuration behaviour."""
@@ -316,6 +317,7 @@ class TestCRMSettings:
 # =========================================================================
 # Helpers
 # =========================================================================
+
 
 class _FakeSettings:
     """Lightweight stand-in for the global ``settings`` object."""

@@ -11,13 +11,12 @@ Provides methods to:
 
 import base64
 import logging
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Any, Dict, List, Optional
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from google.oauth2.credentials import Credentials
 
 from .auth import GmailAuth
 
@@ -60,15 +59,11 @@ class GmailClient:
         """
         if self._service is None:
             creds = self.auth.get_credentials()
-            self._service = build('gmail', 'v1', credentials=creds)
+            self._service = build("gmail", "v1", credentials=creds)
             logger.info("Gmail API service initialized")
         return self._service
 
-    def fetch_unread_emails(
-        self,
-        max_results: int = 10,
-        label_ids: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+    def fetch_unread_emails(self, max_results: int = 10, label_ids: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """
         Fetch unread emails from inbox.
 
@@ -80,16 +75,14 @@ class GmailClient:
             List of email metadata dicts with 'id', 'threadId'
         """
         if label_ids is None:
-            label_ids = ['INBOX', 'UNREAD']
+            label_ids = ["INBOX", "UNREAD"]
 
         try:
-            results = self.service.users().messages().list(
-                userId='me',
-                labelIds=label_ids,
-                maxResults=max_results
-            ).execute()
+            results = (
+                self.service.users().messages().list(userId="me", labelIds=label_ids, maxResults=max_results).execute()
+            )
 
-            messages = results.get('messages', [])
+            messages = results.get("messages", [])
             logger.info(f"Found {len(messages)} unread emails")
             return messages
 
@@ -97,11 +90,7 @@ class GmailClient:
             logger.error(f"Gmail API error fetching emails: {e}")
             raise
 
-    def fetch_emails_with_query(
-        self,
-        query: str,
-        max_results: int = 10
-    ) -> List[Dict[str, Any]]:
+    def fetch_emails_with_query(self, query: str, max_results: int = 10) -> List[Dict[str, Any]]:
         """
         Fetch emails matching a Gmail search query.
 
@@ -123,13 +112,9 @@ class GmailClient:
             client.fetch_emails_with_query("is:unread newer_than:7d")
         """
         try:
-            results = self.service.users().messages().list(
-                userId='me',
-                q=query,
-                maxResults=max_results
-            ).execute()
+            results = self.service.users().messages().list(userId="me", q=query, maxResults=max_results).execute()
 
-            messages = results.get('messages', [])
+            messages = results.get("messages", [])
             logger.info(f"Query '{query}' returned {len(messages)} emails")
             return messages
 
@@ -137,7 +122,7 @@ class GmailClient:
             logger.error(f"Gmail API error with query: {e}")
             raise
 
-    def get_email(self, message_id: str, format: str = 'full') -> Dict[str, Any]:
+    def get_email(self, message_id: str, format: str = "full") -> Dict[str, Any]:
         """
         Get full email content by ID.
 
@@ -149,11 +134,7 @@ class GmailClient:
             Full email data including headers, body, attachments info
         """
         try:
-            message = self.service.users().messages().get(
-                userId='me',
-                id=message_id,
-                format=format
-            ).execute()
+            message = self.service.users().messages().get(userId="me", id=message_id, format=format).execute()
 
             logger.debug(f"Fetched email {message_id}")
             return message
@@ -172,7 +153,7 @@ class GmailClient:
         Returns:
             Email metadata including headers
         """
-        return self.get_email(message_id, format='metadata')
+        return self.get_email(message_id, format="metadata")
 
     def mark_as_read(self, message_id: str) -> bool:
         """
@@ -186,9 +167,7 @@ class GmailClient:
         """
         try:
             self.service.users().messages().modify(
-                userId='me',
-                id=message_id,
-                body={'removeLabelIds': ['UNREAD']}
+                userId="me", id=message_id, body={"removeLabelIds": ["UNREAD"]}
             ).execute()
 
             logger.debug(f"Marked email {message_id} as read")
@@ -210,9 +189,7 @@ class GmailClient:
         """
         try:
             self.service.users().messages().modify(
-                userId='me',
-                id=message_id,
-                body={'addLabelIds': ['UNREAD']}
+                userId="me", id=message_id, body={"addLabelIds": ["UNREAD"]}
             ).execute()
 
             logger.debug(f"Marked email {message_id} as unread")
@@ -235,9 +212,7 @@ class GmailClient:
         """
         try:
             self.service.users().messages().modify(
-                userId='me',
-                id=message_id,
-                body={'addLabelIds': [label_id]}
+                userId="me", id=message_id, body={"addLabelIds": [label_id]}
             ).execute()
 
             logger.debug(f"Added label {label_id} to email {message_id}")
@@ -255,8 +230,8 @@ class GmailClient:
             List of label dicts with 'id', 'name', 'type'
         """
         try:
-            results = self.service.users().labels().list(userId='me').execute()
-            labels = results.get('labels', [])
+            results = self.service.users().labels().list(userId="me").execute()
+            labels = results.get("labels", [])
             return labels
 
         except HttpError as e:
@@ -274,14 +249,15 @@ class GmailClient:
             Created label data
         """
         try:
-            label = self.service.users().labels().create(
-                userId='me',
-                body={
-                    'name': name,
-                    'labelListVisibility': 'labelShow',
-                    'messageListVisibility': 'show'
-                }
-            ).execute()
+            label = (
+                self.service.users()
+                .labels()
+                .create(
+                    userId="me",
+                    body={"name": name, "labelListVisibility": "labelShow", "messageListVisibility": "show"},
+                )
+                .execute()
+            )
 
             logger.info(f"Created label: {name} (id: {label['id']})")
             return label
@@ -298,18 +274,14 @@ class GmailClient:
             Profile data including email address
         """
         try:
-            profile = self.service.users().getProfile(userId='me').execute()
+            profile = self.service.users().getProfile(userId="me").execute()
             return profile
 
         except HttpError as e:
             logger.error(f"Gmail API error fetching profile: {e}")
             raise
 
-    def fetch_emails_batch(
-        self,
-        message_ids: List[str],
-        format: str = 'full'
-    ) -> List[Dict[str, Any]]:
+    def fetch_emails_batch(self, message_ids: List[str], format: str = "full") -> List[Dict[str, Any]]:
         """
         Fetch multiple emails by ID.
 
@@ -336,12 +308,7 @@ class GmailClient:
     # -------------------------------------------------------------------------
 
     def send_email(
-        self,
-        to: str,
-        subject: str,
-        body: str,
-        html_body: Optional[str] = None,
-        reply_to: Optional[str] = None
+        self, to: str, subject: str, body: str, html_body: Optional[str] = None, reply_to: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Send a new email.
@@ -359,24 +326,12 @@ class GmailClient:
         Raises:
             HttpError: If Gmail API call fails
         """
-        message = self._create_message(
-            to=to,
-            subject=subject,
-            body=body,
-            html_body=html_body,
-            reply_to=reply_to
-        )
+        message = self._create_message(to=to, subject=subject, body=body, html_body=html_body, reply_to=reply_to)
 
         try:
-            sent = self.service.users().messages().send(
-                userId='me',
-                body={'raw': message}
-            ).execute()
+            sent = self.service.users().messages().send(userId="me", body={"raw": message}).execute()
 
-            logger.info(
-                f"Sent email to {to} | Subject: {subject[:50]}... | "
-                f"ID: {sent['id']}"
-            )
+            logger.info(f"Sent email to {to} | Subject: {subject[:50]}... | ID: {sent['id']}")
             return sent
 
         except HttpError as e:
@@ -392,7 +347,7 @@ class GmailClient:
         in_reply_to: str,
         references: Optional[str] = None,
         html_body: Optional[str] = None,
-        reply_to: Optional[str] = None
+        reply_to: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Send a reply in an existing email thread.
@@ -420,29 +375,22 @@ class GmailClient:
             html_body=html_body,
             reply_to=reply_to,
             in_reply_to=in_reply_to,
-            references=references or in_reply_to
+            references=references or in_reply_to,
         )
 
         try:
-            sent = self.service.users().messages().send(
-                userId='me',
-                body={
-                    'raw': message,
-                    'threadId': thread_id
-                }
-            ).execute()
-
-            logger.info(
-                f"Sent reply to {to} in thread {thread_id} | "
-                f"Subject: {subject[:50]}... | ID: {sent['id']}"
+            sent = (
+                self.service.users()
+                .messages()
+                .send(userId="me", body={"raw": message, "threadId": thread_id})
+                .execute()
             )
+
+            logger.info(f"Sent reply to {to} in thread {thread_id} | Subject: {subject[:50]}... | ID: {sent['id']}")
             return sent
 
         except HttpError as e:
-            logger.error(
-                f"Gmail API error sending reply to {to} "
-                f"(thread={thread_id}): {e}"
-            )
+            logger.error(f"Gmail API error sending reply to {to} (thread={thread_id}): {e}")
             raise
 
     def _create_message(
@@ -453,7 +401,7 @@ class GmailClient:
         html_body: Optional[str] = None,
         reply_to: Optional[str] = None,
         in_reply_to: Optional[str] = None,
-        references: Optional[str] = None
+        references: Optional[str] = None,
     ) -> str:
         """
         Create a base64url-encoded email message.
@@ -472,27 +420,27 @@ class GmailClient:
         """
         if html_body:
             # Multipart message with both plain text and HTML
-            message = MIMEMultipart('alternative')
-            message.attach(MIMEText(body, 'plain'))
-            message.attach(MIMEText(html_body, 'html'))
+            message = MIMEMultipart("alternative")
+            message.attach(MIMEText(body, "plain"))
+            message.attach(MIMEText(html_body, "html"))
         else:
             # Plain text only
-            message = MIMEText(body, 'plain')
+            message = MIMEText(body, "plain")
 
-        message['To'] = to
-        message['Subject'] = subject
+        message["To"] = to
+        message["Subject"] = subject
 
         if reply_to:
-            message['Reply-To'] = reply_to
+            message["Reply-To"] = reply_to
 
         if in_reply_to:
-            message['In-Reply-To'] = in_reply_to
+            message["In-Reply-To"] = in_reply_to
 
         if references:
-            message['References'] = references
+            message["References"] = references
 
         # Encode message
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
         return raw
 
     def get_thread(self, thread_id: str) -> Dict[str, Any]:
@@ -506,10 +454,7 @@ class GmailClient:
             Thread data with all messages
         """
         try:
-            thread = self.service.users().threads().get(
-                userId='me',
-                id=thread_id
-            ).execute()
+            thread = self.service.users().threads().get(userId="me", id=thread_id).execute()
 
             logger.debug(f"Fetched thread {thread_id}")
             return thread

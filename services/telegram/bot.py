@@ -24,13 +24,13 @@ MAX_MESSAGE_LENGTH = 4096
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
+from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     Application,
-    CommandHandler,
     CallbackQueryHandler,
-    MessageHandler,
+    CommandHandler,
     ContextTypes,
+    MessageHandler,
     filters,
 )
 
@@ -73,9 +73,7 @@ async def _reject_unauthorized(update: Update) -> bool:
         f"user={update.effective_user.username or update.effective_user.id}"
     )
     if update.message:
-        await update.message.reply_text(
-            "\u26d4 Unauthorized. This bot is restricted to the admin account."
-        )
+        await update.message.reply_text("\u26d4 Unauthorized. This bot is restricted to the admin account.")
     elif update.callback_query:
         await update.callback_query.answer(
             "Unauthorized. This bot is restricted to the admin account.",
@@ -91,8 +89,8 @@ def get_repositories():
 
     db = get_database()
     return {
-        'email': EmailRepository(db),
-        'response': ResponseRepository(db),
+        "email": EmailRepository(db),
+        "response": ResponseRepository(db),
     }
 
 
@@ -172,7 +170,7 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     try:
         repos = get_repositories()
-        response_repo = repos['response']
+        response_repo = repos["response"]
 
         pending_drafts = response_repo.get_pending_drafts()
 
@@ -183,50 +181,35 @@ async def pending_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Send header message
         await update.message.reply_text(f"\U0001f4cb Pending Drafts  \u2014  {len(pending_drafts)} awaiting review")
 
-        for i, draft in enumerate(pending_drafts[:10], 1):
-            from_addr = draft.get('from_address', 'Unknown')
-            subject = draft.get('subject', 'No Subject')[:40]
-            intent = draft.get('intent', 'unknown')
-            response_id = draft['id']
+        for _i, draft in enumerate(pending_drafts[:10], 1):
+            from_addr = draft.get("from_address", "Unknown")
+            subject = draft.get("subject", "No Subject")[:40]
+            intent = draft.get("intent", "unknown")
+            response_id = draft["id"]
 
             keyboard = [
                 [
-                    InlineKeyboardButton(
-                        "\u2705 Approve", callback_data=f"approve:{response_id}"
-                    ),
-                    InlineKeyboardButton(
-                        "\u274c Reject", callback_data=f"reject:{response_id}"
-                    ),
+                    InlineKeyboardButton("\u2705 Approve", callback_data=f"approve:{response_id}"),
+                    InlineKeyboardButton("\u274c Reject", callback_data=f"reject:{response_id}"),
                 ],
                 [
-                    InlineKeyboardButton(
-                        "\u270f\ufe0f Edit", callback_data=f"edit:{response_id}"
-                    ),
-                    InlineKeyboardButton(
-                        "\U0001f441 View", callback_data=f"view:{response_id}"
-                    ),
-                ]
+                    InlineKeyboardButton("\u270f\ufe0f Edit", callback_data=f"edit:{response_id}"),
+                    InlineKeyboardButton("\U0001f441 View", callback_data=f"view:{response_id}"),
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await update.message.reply_text(
-                f"\U0001f4c4 Draft #{response_id}\n"
-                f"From: {from_addr}\n"
-                f"Subject: {subject}\n"
-                f"Intent: {intent}",
+                f"\U0001f4c4 Draft #{response_id}\nFrom: {from_addr}\nSubject: {subject}\nIntent: {intent}",
                 reply_markup=reply_markup,
             )
 
         if len(pending_drafts) > 10:
-            await update.message.reply_text(
-                f"\U0001f4cb ... and {len(pending_drafts) - 10} more pending drafts."
-            )
+            await update.message.reply_text(f"\U0001f4cb ... and {len(pending_drafts) - 10} more pending drafts.")
 
     except Exception as e:
         logger.error(f"Error in pending_command: {e}\n{traceback.format_exc()}")
-        await update.message.reply_text(
-            "\u26a0\ufe0f Error fetching pending drafts. Please try again."
-        )
+        await update.message.reply_text("\u26a0\ufe0f Error fetching pending drafts. Please try again.")
 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -240,14 +223,13 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     try:
         repos = get_repositories()
-        email_repo = repos['email']
-        response_repo = repos['response']
+        email_repo = repos["email"]
+        response_repo = repos["response"]
 
         email_stats = email_repo.count_by_status()
-        pending_drafts = response_repo.count_pending_drafts()
 
         responses_by_status = {}
-        for status in ['draft', 'approved', 'sent', 'rejected', 'failed']:
+        for status in ["draft", "approved", "sent", "rejected", "failed"]:
             responses = response_repo.get_responses_by_status(status, limit=1000)
             responses_by_status[status] = len(responses)
 
@@ -271,9 +253,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     except Exception as e:
         logger.error(f"Error in stats_command: {e}\n{traceback.format_exc()}")
-        await update.message.reply_text(
-            "\u26a0\ufe0f Error fetching statistics. Please try again."
-        )
+        await update.message.reply_text("\u26a0\ufe0f Error fetching statistics. Please try again.")
 
 
 async def calendar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -294,39 +274,37 @@ async def calendar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         events = db.execute_query(
             cal_queries.GET_UPCOMING_CALENDAR_EVENTS,
             params=(10,),
-            fetch='all',
+            fetch="all",
         )
 
         if not events:
             await update.message.reply_text("\U0001f4c5 No upcoming calendar events.")
             return
 
-        await update.message.reply_text(
-            f"\U0001f4c5 Upcoming Events  \u2014  {len(events)} scheduled"
-        )
+        await update.message.reply_text(f"\U0001f4c5 Upcoming Events  \u2014  {len(events)} scheduled")
 
         for event in events:
             event = dict(event)
-            title = event.get('title', 'Untitled')
-            location = event.get('location', '')
-            start_time = event.get('start_time')
-            end_time = event.get('end_time')
-            source = event.get('source', 'unknown')
-            customer = event.get('customer_name', '')
+            title = event.get("title", "Untitled")
+            location = event.get("location", "")
+            start_time = event.get("start_time")
+            end_time = event.get("end_time")
+            source = event.get("source", "unknown")
+            customer = event.get("customer_name", "")
 
-            date_str = 'Unknown'
-            time_str = ''
-            if start_time and hasattr(start_time, 'strftime'):
-                date_str = start_time.strftime('%a, %b %d')
-                time_str = start_time.strftime('%I:%M %p')
+            date_str = "Unknown"
+            time_str = ""
+            if start_time and hasattr(start_time, "strftime"):
+                date_str = start_time.strftime("%a, %b %d")
+                time_str = start_time.strftime("%I:%M %p")
 
-            duration_str = ''
-            if start_time and end_time and hasattr(start_time, '__sub__'):
+            duration_str = ""
+            if start_time and end_time and hasattr(start_time, "__sub__"):
                 duration = end_time - start_time
                 hours = duration.total_seconds() / 3600
                 duration_str = f" ({hours:.1f}h)"
 
-            source_label = "Manual" if source == 'manual' else "Auto"
+            source_label = "Manual" if source == "manual" else "Auto"
 
             lines = [f"\U0001f4c5 {title}"]
             lines.append(f"\U0001f550 {date_str} at {time_str}{duration_str}")
@@ -336,18 +314,14 @@ async def calendar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 lines.append(f"\U0001f4cd {location}")
             lines.append(f"Source: {source_label}")
 
-            await update.message.reply_text('\n'.join(lines))
+            await update.message.reply_text("\n".join(lines))
 
     except Exception as e:
         logger.error(f"Error in calendar_command: {e}\n{traceback.format_exc()}")
-        await update.message.reply_text(
-            "\u26a0\ufe0f Error fetching calendar events. Please try again."
-        )
+        await update.message.reply_text("\u26a0\ufe0f Error fetching calendar events. Please try again.")
 
 
-async def button_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle inline button callbacks.
 
@@ -363,11 +337,11 @@ async def button_callback(
     user = update.effective_user
     logger.info(f"Callback received: {data} from user {user.username or user.id}")
 
-    if ':' not in data:
+    if ":" not in data:
         await query.edit_message_text("\u26a0\ufe0f Invalid callback data.")
         return
 
-    action, response_id_str = data.split(':', 1)
+    action, response_id_str = data.split(":", 1)
 
     try:
         response_id = int(response_id_str)
@@ -377,22 +351,18 @@ async def button_callback(
 
     try:
         repos = get_repositories()
-        response_repo = repos['response']
+        response_repo = repos["response"]
 
         response = response_repo.get_response_with_email(response_id)
         if not response:
-            await query.edit_message_text(
-                f"\u26a0\ufe0f Response #{response_id} not found."
-            )
+            await query.edit_message_text(f"\u26a0\ufe0f Response #{response_id} not found.")
             return
 
-        current_status = response.get('status')
+        current_status = response.get("status")
 
-        if action == 'approve':
-            if current_status != 'draft':
-                await query.edit_message_text(
-                    f"\u2139\ufe0f Response #{response_id} is already {current_status}."
-                )
+        if action == "approve":
+            if current_status != "draft":
+                await query.edit_message_text(f"\u2139\ufe0f Response #{response_id} is already {current_status}.")
                 return
 
             user = update.effective_user
@@ -400,52 +370,39 @@ async def button_callback(
             success = response_repo.approve_response(response_id, approved_by)
 
             if success:
-                logger.info(
-                    f"Response {response_id} approved by {approved_by} via Telegram"
-                )
+                logger.info(f"Response {response_id} approved by {approved_by} via Telegram")
 
                 from services.celery_app import app as celery_app
-                celery_app.send_task(
-                    'services.tasks.email_tasks.send_single_response_task',
-                    args=[response_id]
-                )
+
+                celery_app.send_task("services.tasks.email_tasks.send_single_response_task", args=[response_id])
 
                 await query.edit_message_text(
-                    f"\u2705 Response #{response_id} approved by {approved_by}.\n"
-                    f"Email will be sent shortly."
+                    f"\u2705 Response #{response_id} approved by {approved_by}.\nEmail will be sent shortly."
                 )
             else:
-                await query.edit_message_text(
-                    f"\u26a0\ufe0f Failed to approve response #{response_id}."
-                )
+                await query.edit_message_text(f"\u26a0\ufe0f Failed to approve response #{response_id}.")
 
-        elif action == 'reject':
-            if current_status != 'draft':
-                await query.edit_message_text(
-                    f"\u2139\ufe0f Response #{response_id} is already {current_status}."
-                )
+        elif action == "reject":
+            if current_status != "draft":
+                await query.edit_message_text(f"\u2139\ufe0f Response #{response_id} is already {current_status}.")
                 return
 
             success = response_repo.reject_response(response_id)
 
             if success:
                 logger.info(f"Response {response_id} rejected via Telegram")
-                await query.edit_message_text(
-                    f"\U0001f6ab Response #{response_id} has been rejected."
-                )
+                await query.edit_message_text(f"\U0001f6ab Response #{response_id} has been rejected.")
             else:
-                await query.edit_message_text(
-                    f"\u26a0\ufe0f Failed to reject response #{response_id}."
-                )
+                await query.edit_message_text(f"\u26a0\ufe0f Failed to reject response #{response_id}.")
 
-        elif action == 'view':
-            draft_content = response.get('draft_content', 'No content')
-            from_addr = response.get('from_address', 'Unknown')
-            subject = response.get('subject', 'No Subject')
-            intent = response.get('intent', 'unknown')
-            status = response.get('status', 'unknown')
+        elif action == "view":
+            draft_content = response.get("draft_content", "No content")
+            from_addr = response.get("from_address", "Unknown")
+            subject = response.get("subject", "No Subject")
+            intent = response.get("intent", "unknown")
+            status = response.get("status", "unknown")
             # Field is aliased as 'original_body' in GET_RESPONSE_WITH_EMAIL query
-            original_body = response.get('original_body') or response.get('body') or 'No original message'
+            original_body = response.get("original_body") or response.get("body") or "No original message"
 
             # Build header (fixed size)
             header = (
@@ -480,48 +437,42 @@ async def button_callback(
 
             # Final safety check
             if len(view_message) > MAX_MESSAGE_LENGTH - 100:
-                view_message = view_message[:MAX_MESSAGE_LENGTH - 150] + "\n... (message truncated)"
+                view_message = view_message[: MAX_MESSAGE_LENGTH - 150] + "\n... (message truncated)"
 
             keyboard = []
-            if status == 'draft':
+            if status == "draft":
                 keyboard = [
                     [
-                        InlineKeyboardButton(
-                            "\u2705 Approve", callback_data=f"approve:{response_id}"
-                        ),
-                        InlineKeyboardButton(
-                            "\u274c Reject", callback_data=f"reject:{response_id}"
-                        ),
+                        InlineKeyboardButton("\u2705 Approve", callback_data=f"approve:{response_id}"),
+                        InlineKeyboardButton("\u274c Reject", callback_data=f"reject:{response_id}"),
                     ],
                     [
-                        InlineKeyboardButton(
-                            "\u270f\ufe0f Edit", callback_data=f"edit:{response_id}"
-                        ),
-                    ]
+                        InlineKeyboardButton("\u270f\ufe0f Edit", callback_data=f"edit:{response_id}"),
+                    ],
                 ]
 
             reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
 
             await query.edit_message_text(view_message, reply_markup=reply_markup)
 
-        elif action == 'edit':
-            if current_status != 'draft':
+        elif action == "edit":
+            if current_status != "draft":
                 await query.edit_message_text(
                     f"\u2139\ufe0f Response #{response_id} is already {current_status} and cannot be edited."
                 )
                 return
 
             # Check if user is already editing another draft
-            current_editing = context.user_data.get('editing_response_id')
+            current_editing = context.user_data.get("editing_response_id")
             if current_editing and current_editing != response_id:
                 logger.info(f"User switching edit from {current_editing} to {response_id}")
 
             # Store the response_id in user_data for the edit flow
-            context.user_data['editing_response_id'] = response_id
+            context.user_data["editing_response_id"] = response_id
 
-            draft_content = response.get('draft_content', 'No content')
-            from_addr = response.get('from_address', 'Unknown')
-            subject = response.get('subject', 'No Subject')
+            draft_content = response.get("draft_content", "No content")
+            from_addr = response.get("from_address", "Unknown")
+            subject = response.get("subject", "No Subject")
 
             # Show current draft and prompt for new content
             edit_message = (
@@ -537,43 +488,38 @@ async def button_callback(
 
             keyboard = [
                 [
-                    InlineKeyboardButton(
-                        "\u274c Cancel Edit", callback_data=f"cancel_edit:{response_id}"
-                    ),
+                    InlineKeyboardButton("\u274c Cancel Edit", callback_data=f"cancel_edit:{response_id}"),
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await query.edit_message_text(edit_message, reply_markup=reply_markup)
 
-        elif action == 'cancel_edit':
+        elif action == "cancel_edit":
             # Clear editing state
-            context.user_data.pop('editing_response_id', None)
+            context.user_data.pop("editing_response_id", None)
 
             await query.edit_message_text(
-                f"\u274c Edit cancelled for Response #{response_id}.\n"
-                f"Use /pending to view drafts again."
+                f"\u274c Edit cancelled for Response #{response_id}.\nUse /pending to view drafts again."
             )
 
-        elif action == 'calendar_force':
+        elif action == "calendar_force":
             # Force-create calendar event despite conflicts
             try:
                 from services.celery_app import app as celery_app
+
                 celery_app.send_task(
-                    'services.tasks.calendar_tasks.force_create_calendar_event_task',
+                    "services.tasks.calendar_tasks.force_create_calendar_event_task",
                     args=[response_id],
                 )
                 await query.edit_message_text(
-                    f"\u2705 Calendar event for Response #{response_id} "
-                    f"will be created (ignoring conflicts)."
+                    f"\u2705 Calendar event for Response #{response_id} will be created (ignoring conflicts)."
                 )
             except Exception as e:
                 logger.error(f"Failed to queue force calendar task: {e}")
-                await query.edit_message_text(
-                    f"\u26a0\ufe0f Failed to create calendar event. Please try again."
-                )
+                await query.edit_message_text("\u26a0\ufe0f Failed to create calendar event. Please try again.")
 
-        elif action == 'calendar_skip':
+        elif action == "calendar_skip":
             # Skip calendar event creation
             try:
                 from database.connection import get_database
@@ -582,23 +528,20 @@ async def button_callback(
                 db = get_database()
                 db.execute_query(
                     cal_queries.UPDATE_RESPONSE_CALENDAR_STATUS,
-                    params=(None, 'skipped', response_id),
-                    fetch='one',
+                    params=(None, "skipped", response_id),
+                    fetch="one",
                 )
-                await query.edit_message_text(
-                    f"\u23ed Calendar event skipped for Response #{response_id}."
-                )
+                await query.edit_message_text(f"\u23ed Calendar event skipped for Response #{response_id}.")
             except Exception as e:
                 logger.error(f"Failed to skip calendar event: {e}")
-                await query.edit_message_text(
-                    f"\u26a0\ufe0f Error updating calendar status. Please try again."
-                )
+                await query.edit_message_text("\u26a0\ufe0f Error updating calendar status. Please try again.")
 
-        elif action == 'calendar_details':
+        elif action == "calendar_details":
             # Show conflict details
             try:
                 import json
-                conflict_details = response.get('calendar_conflict_details')
+
+                conflict_details = response.get("calendar_conflict_details")
                 if conflict_details:
                     if isinstance(conflict_details, str):
                         conflict_details = json.loads(conflict_details)
@@ -606,10 +549,7 @@ async def button_callback(
                     lines = ["\u26a0\ufe0f Calendar Conflict Details\n"]
                     lines.append(f"Response #{response_id}\n")
                     for c in conflict_details:
-                        lines.append(
-                            f"- {c.get('title', 'Untitled')}: "
-                            f"{c.get('start', '?')} - {c.get('end', '?')}"
-                        )
+                        lines.append(f"- {c.get('title', 'Untitled')}: {c.get('start', '?')} - {c.get('end', '?')}")
 
                     keyboard = [
                         [
@@ -626,7 +566,7 @@ async def button_callback(
                     reply_markup = InlineKeyboardMarkup(keyboard)
 
                     await query.edit_message_text(
-                        '\n'.join(lines),
+                        "\n".join(lines),
                         reply_markup=reply_markup,
                     )
                 else:
@@ -635,23 +575,17 @@ async def button_callback(
                     )
             except Exception as e:
                 logger.error(f"Failed to show conflict details: {e}")
-                await query.edit_message_text(
-                    f"\u26a0\ufe0f Error loading conflict details. Please try again."
-                )
+                await query.edit_message_text("\u26a0\ufe0f Error loading conflict details. Please try again.")
 
         else:
             await query.edit_message_text(f"Unknown action: {action}")
 
     except Exception as e:
         logger.error(f"Error handling callback {data}: {e}\n{traceback.format_exc()}")
-        await query.edit_message_text(
-            f"\u26a0\ufe0f Error processing action. Please try again."
-        )
+        await query.edit_message_text("\u26a0\ufe0f Error processing action. Please try again.")
 
 
-async def handle_edit_message(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_edit_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle incoming message when user is editing a draft.
 
@@ -660,11 +594,11 @@ async def handle_edit_message(
     if await _reject_unauthorized(update):
         return
 
-    response_id = context.user_data.get('editing_response_id')
+    response_id = context.user_data.get("editing_response_id")
 
     if not response_id:
         # Not in edit mode, ignore this message
-        logger.debug(f"Message received but not in edit mode, ignoring")
+        logger.debug("Message received but not in edit mode, ignoring")
         return
 
     user = update.effective_user
@@ -680,22 +614,20 @@ async def handle_edit_message(
 
     try:
         repos = get_repositories()
-        response_repo = repos['response']
+        response_repo = repos["response"]
 
         # Verify response still exists and is a draft
         response = response_repo.get_response_with_email(response_id)
         if not response:
-            await update.message.reply_text(
-                f"\u26a0\ufe0f Response #{response_id} not found."
-            )
-            context.user_data.pop('editing_response_id', None)
+            await update.message.reply_text(f"\u26a0\ufe0f Response #{response_id} not found.")
+            context.user_data.pop("editing_response_id", None)
             return
 
-        if response.get('status') != 'draft':
+        if response.get("status") != "draft":
             await update.message.reply_text(
                 f"\u2139\ufe0f Response #{response_id} is no longer a draft and cannot be edited."
             )
-            context.user_data.pop('editing_response_id', None)
+            context.user_data.pop("editing_response_id", None)
             return
 
         # Update the draft content
@@ -705,26 +637,18 @@ async def handle_edit_message(
             logger.info(f"Response {response_id} content updated via Telegram")
 
             # Clear editing state
-            context.user_data.pop('editing_response_id', None)
+            context.user_data.pop("editing_response_id", None)
 
             # Show success with action buttons
             keyboard = [
                 [
-                    InlineKeyboardButton(
-                        "\u2705 Approve", callback_data=f"approve:{response_id}"
-                    ),
-                    InlineKeyboardButton(
-                        "\u274c Reject", callback_data=f"reject:{response_id}"
-                    ),
+                    InlineKeyboardButton("\u2705 Approve", callback_data=f"approve:{response_id}"),
+                    InlineKeyboardButton("\u274c Reject", callback_data=f"reject:{response_id}"),
                 ],
                 [
-                    InlineKeyboardButton(
-                        "\u270f\ufe0f Edit Again", callback_data=f"edit:{response_id}"
-                    ),
-                    InlineKeyboardButton(
-                        "\U0001f441 View Full", callback_data=f"view:{response_id}"
-                    ),
-                ]
+                    InlineKeyboardButton("\u270f\ufe0f Edit Again", callback_data=f"edit:{response_id}"),
+                    InlineKeyboardButton("\U0001f441 View Full", callback_data=f"view:{response_id}"),
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -737,18 +661,14 @@ async def handle_edit_message(
                 f"\u2705 Response #{response_id} updated successfully!\n\n"
                 f"\u2501\u2501 New Draft Preview \u2501\u2501\n"
                 f"{preview}",
-                reply_markup=reply_markup
+                reply_markup=reply_markup,
             )
         else:
-            await update.message.reply_text(
-                f"\u26a0\ufe0f Failed to update Response #{response_id}. Please try again."
-            )
+            await update.message.reply_text(f"\u26a0\ufe0f Failed to update Response #{response_id}. Please try again.")
 
     except Exception as e:
         logger.error(f"Error updating response {response_id}: {e}\n{traceback.format_exc()}")
-        await update.message.reply_text(
-            "\u26a0\ufe0f Error updating draft. Please try again."
-        )
+        await update.message.reply_text("\u26a0\ufe0f Error updating draft. Please try again.")
 
 
 async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -756,22 +676,17 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if await _reject_unauthorized(update):
         return
 
-    response_id = context.user_data.pop('editing_response_id', None)
+    response_id = context.user_data.pop("editing_response_id", None)
 
     if response_id:
         await update.message.reply_text(
-            f"\u274c Edit cancelled for Response #{response_id}.\n"
-            f"Use /pending to view drafts."
+            f"\u274c Edit cancelled for Response #{response_id}.\nUse /pending to view drafts."
         )
     else:
-        await update.message.reply_text(
-            "\u2139\ufe0f Nothing to cancel. You're not currently editing any draft."
-        )
+        await update.message.reply_text("\u2139\ufe0f Nothing to cancel. You're not currently editing any draft.")
 
 
-async def error_handler(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Log errors caused by Updates."""
     logger.error(f"Update {update} caused error: {context.error}")
 
@@ -804,18 +719,11 @@ def create_application() -> Optional[Application]:
     """
     token = settings.telegram.bot_token
 
-    if not token or token == 'your_bot_token_from_botfather':
-        logger.warning(
-            "TELEGRAM_BOT_TOKEN not configured. Bot will not start."
-        )
+    if not token or token == "your_bot_token_from_botfather":
+        logger.warning("TELEGRAM_BOT_TOKEN not configured. Bot will not start.")
         return None
 
-    application = (
-        Application.builder()
-        .token(token)
-        .post_init(set_bot_commands)
-        .build()
-    )
+    application = Application.builder().token(token).post_init(set_bot_commands).build()
 
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
@@ -827,12 +735,7 @@ def create_application() -> Optional[Application]:
 
     # Message handler for receiving edited draft content
     # Only processes messages when user is in edit mode (has editing_response_id)
-    application.add_handler(
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            handle_edit_message
-        )
-    )
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_message))
 
     application.add_error_handler(error_handler)
 
@@ -862,5 +765,5 @@ def main() -> None:
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

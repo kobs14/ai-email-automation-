@@ -8,17 +8,18 @@ to prevent SQL injection.
 
 import logging
 from contextlib import contextmanager
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import psycopg2
-from psycopg2 import pool, extras, OperationalError
 from psycopg2 import DatabaseError as PsycopgDatabaseError
+from psycopg2 import OperationalError, extras, pool
 
 logger = logging.getLogger(__name__)
 
 
 class DatabaseError(Exception):
     """Custom exception for database operations."""
+
     pass
 
 
@@ -44,12 +45,7 @@ class Database:
         db.close_all_connections()
     """
 
-    def __init__(
-        self,
-        connection_string: str,
-        min_conn: int = 2,
-        max_conn: int = 10
-    ):
+    def __init__(self, connection_string: str, min_conn: int = 2, max_conn: int = 10):
         """
         Initialize the connection pool.
 
@@ -68,16 +64,12 @@ class Database:
         """Create the connection pool."""
         try:
             self._pool = pool.ThreadedConnectionPool(
-                minconn=self._min_conn,
-                maxconn=self._max_conn,
-                dsn=self._connection_string
+                minconn=self._min_conn, maxconn=self._max_conn, dsn=self._connection_string
             )
-            logger.info(
-                f"Connection pool initialized (min={self._min_conn}, max={self._max_conn})"
-            )
+            logger.info(f"Connection pool initialized (min={self._min_conn}, max={self._max_conn})")
         except OperationalError as e:
             logger.error(f"Failed to initialize connection pool: {e}")
-            raise DatabaseError(f"Could not connect to database: {e}")
+            raise DatabaseError(f"Could not connect to database: {e}") from e
 
     def get_connection(self) -> psycopg2.extensions.connection:
         """
@@ -95,11 +87,11 @@ class Database:
         try:
             conn = self._pool.getconn()
             # Validate connection is still alive
-            conn.isolation_level
+            _ = conn.isolation_level
             return conn
         except (OperationalError, PsycopgDatabaseError) as e:
             logger.error(f"Failed to get connection from pool: {e}")
-            raise DatabaseError(f"Could not get database connection: {e}")
+            raise DatabaseError(f"Could not get database connection: {e}") from e
 
     def return_connection(self, conn: psycopg2.extensions.connection) -> None:
         """
@@ -153,10 +145,7 @@ class Database:
                 self.return_connection(conn)
 
     def execute_query(
-        self,
-        query: str,
-        params: tuple = None,
-        fetch: Optional[str] = None
+        self, query: str, params: tuple = None, fetch: Optional[str] = None
     ) -> Optional[Union[Dict, List[Dict]]]:
         """
         Execute a query and optionally return results.
@@ -188,22 +177,18 @@ class Database:
             )
         """
         # Determine if this is a write operation
-        is_write = query.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE'))
+        is_write = query.strip().upper().startswith(("INSERT", "UPDATE", "DELETE"))
 
         with self.get_cursor(commit=is_write) as cur:
             cur.execute(query, params)
 
-            if fetch == 'one':
+            if fetch == "one":
                 return cur.fetchone()
-            elif fetch == 'all':
+            elif fetch == "all":
                 return cur.fetchall()
             return None
 
-    def execute_many(
-        self,
-        query: str,
-        params_list: List[tuple]
-    ) -> int:
+    def execute_many(self, query: str, params_list: List[tuple]) -> int:
         """
         Execute a query multiple times with different parameters.
 
@@ -225,11 +210,7 @@ class Database:
             return cur.rowcount
 
     def execute_values(
-        self,
-        query: str,
-        values: List[tuple],
-        template: Optional[str] = None,
-        fetch: bool = False
+        self, query: str, values: List[tuple], template: Optional[str] = None, fetch: bool = False
     ) -> Optional[List[Dict]]:
         """
         Efficiently insert multiple rows using execute_values.
@@ -254,9 +235,7 @@ class Database:
         """
         with self.get_cursor(commit=True) as cur:
             if fetch:
-                return extras.execute_values(
-                    cur, query, values, template=template, fetch=True
-                )
+                return extras.execute_values(cur, query, values, template=template, fetch=True)
             else:
                 extras.execute_values(cur, query, values, template=template)
                 return None
@@ -317,7 +296,7 @@ def get_database() -> Database:
         _db_instance = Database(
             connection_string=settings.database.dsn,
             min_conn=settings.database.min_connections,
-            max_conn=settings.database.max_connections
+            max_conn=settings.database.max_connections,
         )
 
     return _db_instance

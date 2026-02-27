@@ -7,7 +7,6 @@ Manages OAuth 2.0 flow for Gmail API access, including:
 - Credential validation
 """
 
-import json
 import logging
 import os
 import tempfile
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Gmail API scopes
 # gmail.modify includes read access and ability to mark as read
 SCOPES = [
-    'https://www.googleapis.com/auth/gmail.modify',
+    "https://www.googleapis.com/auth/gmail.modify",
 ]
 
 
@@ -40,8 +39,10 @@ def _get_default_scopes() -> list:
     """
     try:
         from config.settings import settings
+
         if settings.calendar.is_configured():
             from services.calendar.auth import CALENDAR_SCOPES
+
             return CALENDAR_SCOPES
     except Exception:
         pass
@@ -62,9 +63,9 @@ class GmailAuth:
 
     def __init__(
         self,
-        credentials_path: str = 'credentials/google_credentials.json',
-        token_path: str = 'credentials/gmail_token.json',
-        scopes: Optional[list] = None
+        credentials_path: str = "credentials/google_credentials.json",
+        token_path: str = "credentials/gmail_token.json",
+        scopes: Optional[list] = None,
     ):
         """
         Initialize Gmail authentication handler.
@@ -108,10 +109,7 @@ class GmailAuth:
         if self.token_path.exists():
             logger.info(f"Loading existing token from {self.token_path}")
             try:
-                creds = Credentials.from_authorized_user_file(
-                    str(self.token_path),
-                    self.scopes
-                )
+                creds = Credentials.from_authorized_user_file(str(self.token_path), self.scopes)
             except Exception as e:
                 logger.warning(f"Failed to load token: {e}")
                 creds = None
@@ -146,18 +144,15 @@ class GmailAuth:
         Returns:
             New OAuth credentials
         """
-        flow = InstalledAppFlow.from_client_secrets_file(
-            str(self.credentials_path),
-            self.scopes
-        )
+        flow = InstalledAppFlow.from_client_secrets_file(str(self.credentials_path), self.scopes)
 
         # Run local server to receive OAuth callback
         # Use port 0 to let the system pick an available port
         creds = flow.run_local_server(
             port=0,
-            prompt='consent',
-            success_message='Authorization successful! You can close this window.',
-            open_browser=True
+            prompt="consent",
+            success_message="Authorization successful! You can close this window.",
+            open_browser=True,
         )
 
         return creds
@@ -176,12 +171,9 @@ class GmailAuth:
         self.token_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Atomic write: write to temp file, then rename
-        fd, tmp_path = tempfile.mkstemp(
-            dir=str(self.token_path.parent),
-            suffix='.tmp'
-        )
+        fd, tmp_path = tempfile.mkstemp(dir=str(self.token_path.parent), suffix=".tmp")
         try:
-            with os.fdopen(fd, 'w') as f:
+            with os.fdopen(fd, "w") as f:
                 f.write(creds.to_json())
             os.replace(tmp_path, str(self.token_path))
         except Exception:
@@ -207,10 +199,11 @@ class GmailAuth:
 
         try:
             import requests
+
             requests.post(
-                'https://oauth2.googleapis.com/revoke',
-                params={'token': self._credentials.token},
-                headers={'content-type': 'application/x-www-form-urlencoded'}
+                "https://oauth2.googleapis.com/revoke",
+                params={"token": self._credentials.token},
+                headers={"content-type": "application/x-www-form-urlencoded"},
             )
 
             # Delete token file
@@ -238,10 +231,7 @@ class GmailAuth:
 
         if self.token_path.exists():
             try:
-                creds = Credentials.from_authorized_user_file(
-                    str(self.token_path),
-                    self.scopes
-                )
+                creds = Credentials.from_authorized_user_file(str(self.token_path), self.scopes)
                 return creds.valid or (creds.expired and creds.refresh_token)
             except Exception:
                 return False

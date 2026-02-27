@@ -15,8 +15,8 @@ import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
 from html import unescape
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ParsedEmail:
     """Parsed email data ready for database insertion."""
+
     message_id: str
     from_address: str
     subject: str
@@ -47,9 +48,18 @@ class EmailParser:
 
     # Headers we want to preserve in raw_headers
     PRESERVED_HEADERS = [
-        'From', 'To', 'Cc', 'Bcc', 'Subject', 'Date',
-        'Message-ID', 'In-Reply-To', 'References',
-        'Content-Type', 'MIME-Version', 'Reply-To'
+        "From",
+        "To",
+        "Cc",
+        "Bcc",
+        "Subject",
+        "Date",
+        "Message-ID",
+        "In-Reply-To",
+        "References",
+        "Content-Type",
+        "MIME-Version",
+        "Reply-To",
     ]
 
     def parse(self, gmail_message: Dict[str, Any]) -> ParsedEmail:
@@ -62,33 +72,29 @@ class EmailParser:
         Returns:
             ParsedEmail dataclass with extracted data
         """
-        gmail_id = gmail_message.get('id', '')
-        thread_id = gmail_message.get('threadId', '')
-        labels = gmail_message.get('labelIds', [])
+        gmail_id = gmail_message.get("id", "")
+        thread_id = gmail_message.get("threadId", "")
+        labels = gmail_message.get("labelIds", [])
 
         # Extract headers
-        payload = gmail_message.get('payload', {})
-        headers = self._extract_headers(payload.get('headers', []))
+        payload = gmail_message.get("payload", {})
+        headers = self._extract_headers(payload.get("headers", []))
 
         # Get key fields from headers
-        message_id = headers.get('Message-ID', f'gmail-{gmail_id}')
-        from_address = self._parse_email_address(headers.get('From', ''))
-        subject = headers.get('Subject', '(No Subject)')
-        date_str = headers.get('Date', '')
+        message_id = headers.get("Message-ID", f"gmail-{gmail_id}")
+        from_address = self._parse_email_address(headers.get("From", ""))
+        subject = headers.get("Subject", "(No Subject)")
+        date_str = headers.get("Date", "")
         received_at = self._parse_date(date_str)
 
         # Extract body
         body = self._extract_body(payload)
 
         # Build raw headers dict
-        raw_headers = {
-            key: headers.get(key)
-            for key in self.PRESERVED_HEADERS
-            if headers.get(key)
-        }
-        raw_headers['gmail_id'] = gmail_id
-        raw_headers['thread_id'] = thread_id
-        raw_headers['labels'] = labels
+        raw_headers = {key: headers.get(key) for key in self.PRESERVED_HEADERS if headers.get(key)}
+        raw_headers["gmail_id"] = gmail_id
+        raw_headers["thread_id"] = thread_id
+        raw_headers["labels"] = labels
 
         return ParsedEmail(
             message_id=message_id,
@@ -99,7 +105,7 @@ class EmailParser:
             raw_headers=raw_headers,
             gmail_id=gmail_id,
             thread_id=thread_id,
-            labels=labels
+            labels=labels,
         )
 
     def _extract_headers(self, headers_list: List[Dict]) -> Dict[str, str]:
@@ -112,10 +118,7 @@ class EmailParser:
         Returns:
             Dict mapping header name to value
         """
-        return {
-            header['name']: header['value']
-            for header in headers_list
-        }
+        return {header["name"]: header["value"] for header in headers_list}
 
     def _parse_email_address(self, from_header: str) -> str:
         """
@@ -133,7 +136,7 @@ class EmailParser:
             Email address only
         """
         if not from_header:
-            return ''
+            return ""
 
         # Use email.utils to parse
         name, email_addr = email.utils.parseaddr(from_header)
@@ -142,7 +145,7 @@ class EmailParser:
             return email_addr.lower()
 
         # Fallback: try regex
-        match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', from_header)
+        match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", from_header)
         if match:
             return match.group(0).lower()
 
@@ -182,49 +185,45 @@ class EmailParser:
         Returns:
             Email body as plain text
         """
-        mime_type = payload.get('mimeType', '')
+        mime_type = payload.get("mimeType", "")
 
         # Simple single-part message
-        if mime_type == 'text/plain':
-            return self._decode_body(payload.get('body', {}))
+        if mime_type == "text/plain":
+            return self._decode_body(payload.get("body", {}))
 
-        if mime_type == 'text/html':
-            html = self._decode_body(payload.get('body', {}))
+        if mime_type == "text/html":
+            html = self._decode_body(payload.get("body", {}))
             return self._html_to_text(html)
 
         # Multipart message - look for parts
-        parts = payload.get('parts', [])
+        parts = payload.get("parts", [])
         if not parts:
             # Try body directly
-            body_data = payload.get('body', {})
-            if body_data.get('data'):
+            body_data = payload.get("body", {})
+            if body_data.get("data"):
                 return self._decode_body(body_data)
-            return ''
+            return ""
 
         # Search for text/plain first, then text/html
-        plain_text = self._find_part_by_type(parts, 'text/plain')
+        plain_text = self._find_part_by_type(parts, "text/plain")
         if plain_text:
             return plain_text
 
-        html_text = self._find_part_by_type(parts, 'text/html')
+        html_text = self._find_part_by_type(parts, "text/html")
         if html_text:
             return self._html_to_text(html_text)
 
         # Recurse into nested multipart
         for part in parts:
-            nested_parts = part.get('parts', [])
+            nested_parts = part.get("parts", [])
             if nested_parts:
                 result = self._extract_body(part)
                 if result:
                     return result
 
-        return ''
+        return ""
 
-    def _find_part_by_type(
-        self,
-        parts: List[Dict],
-        mime_type: str
-    ) -> Optional[str]:
+    def _find_part_by_type(self, parts: List[Dict], mime_type: str) -> Optional[str]:
         """
         Find and decode a specific MIME type from parts.
 
@@ -236,11 +235,11 @@ class EmailParser:
             Decoded content or None
         """
         for part in parts:
-            if part.get('mimeType') == mime_type:
-                return self._decode_body(part.get('body', {}))
+            if part.get("mimeType") == mime_type:
+                return self._decode_body(part.get("body", {}))
 
             # Check nested parts
-            nested = part.get('parts', [])
+            nested = part.get("parts", [])
             if nested:
                 result = self._find_part_by_type(nested, mime_type)
                 if result:
@@ -258,18 +257,18 @@ class EmailParser:
         Returns:
             Decoded string
         """
-        data = body.get('data', '')
+        data = body.get("data", "")
         if not data:
-            return ''
+            return ""
 
         try:
             # Gmail uses base64url encoding
             decoded = base64.urlsafe_b64decode(data)
-            return decoded.decode('utf-8', errors='replace')
+            return decoded.decode("utf-8", errors="replace")
 
         except Exception as e:
             logger.warning(f"Failed to decode body: {e}")
-            return ''
+            return ""
 
     def _html_to_text(self, html: str) -> str:
         """
@@ -285,35 +284,32 @@ class EmailParser:
             Plain text approximation
         """
         if not html:
-            return ''
+            return ""
 
         # Remove script and style elements
-        text = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
-        text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
 
         # Convert <br> and </p> to newlines
-        text = re.sub(r'<br\s*/?>|</p>|</div>|</tr>', '\n', text, flags=re.IGNORECASE)
+        text = re.sub(r"<br\s*/?>|</p>|</div>|</tr>", "\n", text, flags=re.IGNORECASE)
 
         # Convert <li> to bullet points
-        text = re.sub(r'<li[^>]*>', '\n• ', text, flags=re.IGNORECASE)
+        text = re.sub(r"<li[^>]*>", "\n• ", text, flags=re.IGNORECASE)
 
         # Remove all other HTML tags
-        text = re.sub(r'<[^>]+>', '', text)
+        text = re.sub(r"<[^>]+>", "", text)
 
         # Decode HTML entities
         text = unescape(text)
 
         # Clean up whitespace
-        text = re.sub(r'\n\s*\n', '\n\n', text)  # Multiple newlines to double
-        text = re.sub(r' +', ' ', text)  # Multiple spaces to single
+        text = re.sub(r"\n\s*\n", "\n\n", text)  # Multiple newlines to double
+        text = re.sub(r" +", " ", text)  # Multiple spaces to single
         text = text.strip()
 
         return text
 
-    def parse_batch(
-        self,
-        gmail_messages: List[Dict[str, Any]]
-    ) -> List[ParsedEmail]:
+    def parse_batch(self, gmail_messages: List[Dict[str, Any]]) -> List[ParsedEmail]:
         """
         Parse multiple Gmail messages.
 

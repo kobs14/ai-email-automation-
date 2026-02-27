@@ -27,14 +27,14 @@ def register_request_logger(app: Flask) -> None:
 
     @app.after_request
     def after_request(response):
-        duration_ms = (time.time() - g.get('request_start', time.time())) * 1000
+        duration_ms = (time.time() - g.get("request_start", time.time())) * 1000
         logger.info(
             "request_id=%s method=%s path=%s status=%d duration=%.1fms",
-            g.get('request_id', '-'),
+            g.get("request_id", "-"),
             request.method,
             request.path,
             response.status_code,
             duration_ms,
         )
-        response.headers['X-Request-ID'] = g.get('request_id', '')
+        response.headers["X-Request-ID"] = g.get("request_id", "")
         return response

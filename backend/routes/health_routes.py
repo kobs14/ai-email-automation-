@@ -10,10 +10,10 @@ from database.connection import get_database
 
 logger = logging.getLogger(__name__)
 
-health_bp = Blueprint('health', __name__, url_prefix='/api/health')
+health_bp = Blueprint("health", __name__, url_prefix="/api/health")
 
 
-@health_bp.route('', methods=['GET'])
+@health_bp.route("", methods=["GET"])
 def health_check():
     """
     Check database and Redis connectivity.
@@ -22,14 +22,14 @@ def health_check():
     """
     settings = get_settings()
     checks = {
-        'database': False,
-        'redis': False,
+        "database": False,
+        "redis": False,
     }
 
     # Check database
     try:
         db = get_database()
-        checks['database'] = db.is_connected()
+        checks["database"] = db.is_connected()
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
 
@@ -43,14 +43,16 @@ def health_check():
             socket_connect_timeout=2,
         )
         r.ping()
-        checks['redis'] = True
+        checks["redis"] = True
     except Exception as e:
         logger.error(f"Redis health check failed: {e}")
 
     all_healthy = all(checks.values())
     status_code = 200 if all_healthy else 503
 
-    return jsonify({
-        'status': 'healthy' if all_healthy else 'degraded',
-        'checks': checks,
-    }), status_code
+    return jsonify(
+        {
+            "status": "healthy" if all_healthy else "degraded",
+            "checks": checks,
+        }
+    ), status_code

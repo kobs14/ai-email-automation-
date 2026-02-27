@@ -16,17 +16,18 @@ from typing import Any, Dict, Optional
 from anthropic import Anthropic
 
 from config.settings import settings
+
 from .client import get_claude_client
 
 logger = logging.getLogger(__name__)
 
 # Valid intent categories
 VALID_INTENTS = [
-    'quote_request',
-    'booking_request',
-    'rescheduling',
-    'complaint',
-    'general_inquiry',
+    "quote_request",
+    "booking_request",
+    "rescheduling",
+    "complaint",
+    "general_inquiry",
 ]
 
 CLASSIFICATION_PROMPT = """You are an AI assistant for a cleaning service company. Your task is to classify incoming customer emails by their primary intent.
@@ -53,10 +54,7 @@ Respond ONLY with the JSON object, no other text."""
 
 
 def classify_email(
-    body: str,
-    from_address: str = "",
-    subject: str = "",
-    client: Optional[Anthropic] = None
+    body: str, from_address: str = "", subject: str = "", client: Optional[Anthropic] = None
 ) -> Dict[str, Any]:
     """
     Classify an email's intent using Claude API.
@@ -77,18 +75,14 @@ def classify_email(
         client = get_claude_client()
 
     prompt = CLASSIFICATION_PROMPT.format(
-        from_address=from_address or "unknown",
-        subject=subject or "(No Subject)",
-        body=body or "(Empty)"
+        from_address=from_address or "unknown", subject=subject or "(No Subject)", body=body or "(Empty)"
     )
 
     logger.debug(f"Classifying email: {subject[:50]}...")
 
     try:
         response = client.messages.create(
-            model=settings.claude.model,
-            max_tokens=500,
-            messages=[{"role": "user", "content": prompt}]
+            model=settings.claude.model, max_tokens=500, messages=[{"role": "user", "content": prompt}]
         )
 
         response_text = response.content[0].text.strip()
@@ -113,10 +107,7 @@ def classify_email(
             "reasoning": result.get("reasoning", ""),
         }
 
-        logger.info(
-            f"Classified as '{classification['intent']}' "
-            f"(confidence: {classification['confidence']:.2f})"
-        )
+        logger.info(f"Classified as '{classification['intent']}' (confidence: {classification['confidence']:.2f})")
 
         return classification
 

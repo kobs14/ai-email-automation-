@@ -1,0 +1,75 @@
+# =============================================================================
+# EcoClean Email Automation - Python Tooling Configuration
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Pytest
+# -----------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
+addopts = "-v --tb=short"
+
+# -----------------------------------------------------------------------------
+# Coverage
+# -----------------------------------------------------------------------------
+[tool.coverage.run]
+source = ["services", "backend", "database", "config", "cli"]
+omit = [
+    "*/tests/*",
+    "*/migrations/*",
+    "*/__pycache__/*",
+    "*/venv/*",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+]
+
+# -----------------------------------------------------------------------------
+# Ruff (linter + formatter)
+# -----------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+exclude = [
+    "venv/",
+    "frontend/",
+    "__pycache__/",
+    ".git/",
+    "database/migrations/*.sql",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort (import sorting)
+    "N",   # pep8-naming
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E402",   # module level import not at top (needed for sys.path manipulation)
+    "B008",   # do not perform function calls in argument defaults (needed for Flask)
+    "N802",   # function name should be lowercase (test methods may use uppercase)
+    "N803",   # argument name should be lowercase
+    "N806",   # variable in function should be lowercase
+    "SIM105", # use contextlib.suppress (try/except/pass is more explicit)
+    "SIM108", # use ternary operator (if/else is more readable for complex conditions)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["services", "backend", "database", "config", "cli"]

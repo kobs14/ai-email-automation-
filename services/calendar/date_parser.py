@@ -14,11 +14,11 @@ Handles:
 
 import logging
 import re
-from datetime import datetime, timedelta, time
+from datetime import datetime, time, timedelta
 from typing import Optional, Tuple
 
 from dateutil import parser as dateutil_parser
-from dateutil.relativedelta import relativedelta, MO, TU, WE, TH, FR, SA, SU
+from dateutil.relativedelta import FR, MO, SA, SU, TH, TU, WE, relativedelta
 
 from config.settings import settings
 
@@ -26,21 +26,31 @@ logger = logging.getLogger(__name__)
 
 # Maps day names to dateutil weekday constants
 _WEEKDAY_MAP = {
-    'monday': MO, 'mon': MO,
-    'tuesday': TU, 'tue': TU, 'tues': TU,
-    'wednesday': WE, 'wed': WE,
-    'thursday': TH, 'thu': TH, 'thur': TH, 'thurs': TH,
-    'friday': FR, 'fri': FR,
-    'saturday': SA, 'sat': SA,
-    'sunday': SU, 'sun': SU,
+    "monday": MO,
+    "mon": MO,
+    "tuesday": TU,
+    "tue": TU,
+    "tues": TU,
+    "wednesday": WE,
+    "wed": WE,
+    "thursday": TH,
+    "thu": TH,
+    "thur": TH,
+    "thurs": TH,
+    "friday": FR,
+    "fri": FR,
+    "saturday": SA,
+    "sat": SA,
+    "sunday": SU,
+    "sun": SU,
 }
 
 # Maps time keywords to hours
 _TIME_KEYWORD_MAP = {
-    'morning': time(9, 0),
-    'noon': time(12, 0),
-    'afternoon': time(14, 0),
-    'evening': time(17, 0),
+    "morning": time(9, 0),
+    "noon": time(12, 0),
+    "afternoon": time(14, 0),
+    "evening": time(17, 0),
 }
 
 DEFAULT_TIME = time(9, 0)
@@ -124,8 +134,7 @@ class DateParser:
         end_dt = start_dt + timedelta(hours=duration)
 
         logger.info(
-            f"Parsed booking: {start_dt.isoformat()} - {end_dt.isoformat()} "
-            f"(from date='{date_str}', time='{time_str}')"
+            f"Parsed booking: {start_dt.isoformat()} - {end_dt.isoformat()} (from date='{date_str}', time='{time_str}')"
         )
 
         return start_dt, end_dt
@@ -149,29 +158,29 @@ class DateParser:
         today = datetime.now().date()
 
         # Handle relative dates
-        if text in ('today', 'tonight'):
+        if text in ("today", "tonight"):
             return today
 
-        if text in ('tomorrow', 'tmrw'):
+        if text in ("tomorrow", "tmrw"):
             return today + timedelta(days=1)
 
-        if text == 'day after tomorrow':
+        if text == "day after tomorrow":
             return today + timedelta(days=2)
 
         # Handle "in X days"
-        in_days_match = re.match(r'in\s+(\d+)\s+days?', text)
+        in_days_match = re.match(r"in\s+(\d+)\s+days?", text)
         if in_days_match:
             days = int(in_days_match.group(1))
             return today + timedelta(days=days)
 
         # Handle "next <weekday>"
-        next_day_match = re.match(r'(?:next|this)\s+(\w+)', text)
+        next_day_match = re.match(r"(?:next|this)\s+(\w+)", text)
         if next_day_match:
             day_name = next_day_match.group(1)
             weekday = _WEEKDAY_MAP.get(day_name)
             if weekday:
                 # "next" means the upcoming occurrence (at least 1 day ahead)
-                if text.startswith('next'):
+                if text.startswith("next"):
                     result = today + relativedelta(weekday=weekday(+1))
                     # Ensure it's at least tomorrow
                     if result <= today:
@@ -226,7 +235,7 @@ class DateParser:
 
         # Handle "Xam" / "Xpm" patterns
         ampm_match = re.match(
-            r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)',
+            r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)",
             text,
         )
         if ampm_match:
@@ -234,16 +243,16 @@ class DateParser:
             minute = int(ampm_match.group(2) or 0)
             period = ampm_match.group(3)
 
-            if period == 'pm' and hour != 12:
+            if period == "pm" and hour != 12:
                 hour += 12
-            elif period == 'am' and hour == 12:
+            elif period == "am" and hour == 12:
                 hour = 0
 
             if 0 <= hour <= 23 and 0 <= minute <= 59:
                 return time(hour, minute)
 
         # Handle 24-hour format "HH:MM"
-        time_24_match = re.match(r'(\d{1,2}):(\d{2})$', text)
+        time_24_match = re.match(r"(\d{1,2}):(\d{2})$", text)
         if time_24_match:
             hour = int(time_24_match.group(1))
             minute = int(time_24_match.group(2))
@@ -251,7 +260,7 @@ class DateParser:
                 return time(hour, minute)
 
         # Handle bare hour "at 2" / "at 14"
-        bare_hour_match = re.match(r'(?:at\s+)?(\d{1,2})$', text)
+        bare_hour_match = re.match(r"(?:at\s+)?(\d{1,2})$", text)
         if bare_hour_match:
             hour = int(bare_hour_match.group(1))
             if 1 <= hour <= 12:

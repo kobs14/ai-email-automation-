@@ -18,8 +18,6 @@ does nothing, keeping the system backward-compatible.
 import logging
 
 from services.crm.base import BaseCRMProvider
-from services.crm.models import CRMCustomer, CRMDeal, CRMInteraction
-from services.crm.null_provider import NullCRMProvider
 from services.crm.exceptions import (
     CRMConnectionError,
     CRMCustomerNotFoundError,
@@ -27,6 +25,8 @@ from services.crm.exceptions import (
     CRMRateLimitError,
     CRMValidationError,
 )
+from services.crm.models import CRMCustomer, CRMDeal, CRMInteraction
+from services.crm.null_provider import NullCRMProvider
 
 logger = logging.getLogger(__name__)
 

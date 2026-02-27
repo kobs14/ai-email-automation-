@@ -16,17 +16,17 @@ def validate_login(data: Optional[Dict]) -> Tuple[bool, List[str]]:
     errors = []
 
     if not data:
-        return False, ['Request body is required']
+        return False, ["Request body is required"]
 
-    username = data.get('username', '').strip()
-    password = data.get('password', '')
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
 
     if not username:
-        errors.append('Username is required')
+        errors.append("Username is required")
     elif len(username) > 100:
-        errors.append('Username must be 100 characters or fewer')
+        errors.append("Username must be 100 characters or fewer")
 
     if not password:
-        errors.append('Password is required')
+        errors.append("Password is required")
 
     return len(errors) == 0, errors

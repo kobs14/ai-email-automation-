@@ -8,7 +8,6 @@ calendar integration.
 """
 
 import logging
-from typing import Optional
 
 from google.oauth2.credentials import Credentials
 
@@ -18,14 +17,14 @@ logger = logging.getLogger(__name__)
 
 # Combined scopes for Gmail + Calendar
 CALENDAR_SCOPES = [
-    'https://www.googleapis.com/auth/gmail.modify',
-    'https://www.googleapis.com/auth/calendar.events',
+    "https://www.googleapis.com/auth/gmail.modify",
+    "https://www.googleapis.com/auth/calendar.events",
 ]
 
 
 def get_calendar_credentials(
-    credentials_path: str = 'credentials/google_credentials.json',
-    token_path: str = 'credentials/gmail_token.json',
+    credentials_path: str = "credentials/google_credentials.json",
+    token_path: str = "credentials/gmail_token.json",
 ) -> Credentials:
     """
     Get OAuth credentials with both Gmail and Calendar scopes.
@@ -54,7 +53,7 @@ def get_calendar_credentials(
 
 
 def has_calendar_scope(
-    token_path: str = 'credentials/gmail_token.json',
+    token_path: str = "credentials/gmail_token.json",
 ) -> bool:
     """
     Check if the existing token includes calendar scope.

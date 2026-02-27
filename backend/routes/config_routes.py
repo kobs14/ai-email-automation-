@@ -1,6 +1,5 @@
 """Business configuration routes."""
 
-import json
 import logging
 
 from flask import Blueprint, jsonify, request
@@ -13,10 +12,10 @@ from database.schema import ConfigRepository
 
 logger = logging.getLogger(__name__)
 
-config_bp = Blueprint('config', __name__, url_prefix='/api/config')
+config_bp = Blueprint("config", __name__, url_prefix="/api/config")
 
 
-@config_bp.route('', methods=['GET'])
+@config_bp.route("", methods=["GET"])
 @jwt_required
 def get_all_config():
     """Get all configuration values."""
@@ -24,10 +23,10 @@ def get_all_config():
     config_repo = ConfigRepository(db)
 
     all_config = config_repo.get_all_config()
-    return jsonify({'items': all_config}), 200
+    return jsonify({"items": all_config}), 200
 
 
-@config_bp.route('/<string:key>', methods=['GET'])
+@config_bp.route("/<string:key>", methods=["GET"])
 @jwt_required
 def get_config(key: str):
     """Get a specific configuration value."""
@@ -38,11 +37,11 @@ def get_config(key: str):
     if value is None:
         raise APIError(f"Config key '{key}' not found", status_code=404)
 
-    return jsonify({'key': key, 'value': value}), 200
+    return jsonify({"key": key, "value": value}), 200
 
 
-@config_bp.route('/<string:key>', methods=['PUT'])
-@role_required('admin')
+@config_bp.route("/<string:key>", methods=["PUT"])
+@role_required("admin")
 def update_config(key: str):
     """
     Update a configuration value. Admin only.
@@ -53,7 +52,7 @@ def update_config(key: str):
     data = request.get_json(silent=True)
     is_valid, errors = validate_config_update(data)
     if not is_valid:
-        raise APIError('Validation failed', status_code=400, details={'errors': errors})
+        raise APIError("Validation failed", status_code=400, details={"errors": errors})
 
     db = get_database()
     config_repo = ConfigRepository(db)
@@ -61,12 +60,12 @@ def update_config(key: str):
     if not config_repo.config_exists(key):
         raise APIError(f"Config key '{key}' not found", status_code=404)
 
-    value = data['value']
+    value = data["value"]
     if not isinstance(value, dict):
-        value = {'value': value}
+        value = {"value": value}
 
     success = config_repo.set_config(key, value)
     if not success:
-        raise APIError('Failed to update config', status_code=500)
+        raise APIError("Failed to update config", status_code=500)
 
-    return jsonify({'message': f"Config '{key}' updated", 'key': key}), 200
+    return jsonify({"message": f"Config '{key}' updated", "key": key}), 200

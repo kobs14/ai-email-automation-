@@ -8,7 +8,6 @@ identically to a pre-CRM state.
 """
 
 import logging
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from services.crm.base import BaseCRMProvider
@@ -39,29 +38,21 @@ class NullCRMProvider(BaseCRMProvider):
         logger.debug("NullCRMProvider: create_customer('%s') → no-op", customer.email)
         return customer
 
-    def update_customer(
-        self, crm_id: str, updates: Dict[str, Any]
-    ) -> CRMCustomer:
+    def update_customer(self, crm_id: str, updates: Dict[str, Any]) -> CRMCustomer:
         """Return a stub customer — nothing is persisted."""
         logger.debug("NullCRMProvider: update_customer('%s') → no-op", crm_id)
         return CRMCustomer(email="", crm_id=crm_id)
 
-    def get_or_create_customer(
-        self, email: str, defaults: Optional[Dict[str, Any]] = None
-    ) -> Tuple[CRMCustomer, bool]:
+    def get_or_create_customer(self, email: str, defaults: Optional[Dict[str, Any]] = None) -> Tuple[CRMCustomer, bool]:
         """Return a stub customer with created=False — nothing is persisted."""
-        logger.debug(
-            "NullCRMProvider: get_or_create_customer('%s') → stub, False", email
-        )
+        logger.debug("NullCRMProvider: get_or_create_customer('%s') → stub, False", email)
         return CRMCustomer(email=email), False
 
     # ------------------------------------------------------------------
     # Interaction logging
     # ------------------------------------------------------------------
 
-    def log_interaction(
-        self, customer_id: str, interaction: CRMInteraction
-    ) -> bool:
+    def log_interaction(self, customer_id: str, interaction: CRMInteraction) -> bool:
         """Return False — interaction not recorded."""
         logger.debug(
             "NullCRMProvider: log_interaction('%s', type='%s') → False",
@@ -70,13 +61,9 @@ class NullCRMProvider(BaseCRMProvider):
         )
         return False
 
-    def get_customer_interactions(
-        self, customer_id: str, limit: int = 20
-    ) -> List[CRMInteraction]:
+    def get_customer_interactions(self, customer_id: str, limit: int = 20) -> List[CRMInteraction]:
         """Return empty list — no interactions stored."""
-        logger.debug(
-            "NullCRMProvider: get_customer_interactions('%s') → []", customer_id
-        )
+        logger.debug("NullCRMProvider: get_customer_interactions('%s') → []", customer_id)
         return []
 
     # ------------------------------------------------------------------
@@ -85,9 +72,7 @@ class NullCRMProvider(BaseCRMProvider):
 
     def create_deal(self, deal: CRMDeal) -> CRMDeal:
         """Return the input deal unchanged — nothing is persisted."""
-        logger.debug(
-            "NullCRMProvider: create_deal('%s') → no-op", deal.title
-        )
+        logger.debug("NullCRMProvider: create_deal('%s') → no-op", deal.title)
         return deal
 
     def update_deal_stage(self, deal_id: str, stage: str) -> CRMDeal:
@@ -101,9 +86,7 @@ class NullCRMProvider(BaseCRMProvider):
 
     def get_deals_for_customer(self, customer_id: str) -> List[CRMDeal]:
         """Return empty list — no deals stored."""
-        logger.debug(
-            "NullCRMProvider: get_deals_for_customer('%s') → []", customer_id
-        )
+        logger.debug("NullCRMProvider: get_deals_for_customer('%s') → []", customer_id)
         return []
 
     # ------------------------------------------------------------------

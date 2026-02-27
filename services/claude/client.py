@@ -33,9 +33,7 @@ def get_claude_client() -> Anthropic:
         return _client
 
     if not settings.claude.validate():
-        raise ValueError(
-            "ANTHROPIC_API_KEY is not configured. Set it in .env file."
-        )
+        raise ValueError("ANTHROPIC_API_KEY is not configured. Set it in .env file.")
 
     _client = Anthropic(api_key=settings.claude.api_key)
     logger.info(f"Claude client initialized with model: {settings.claude.model}")

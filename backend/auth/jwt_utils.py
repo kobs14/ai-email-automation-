@@ -1,7 +1,7 @@
 """JWT token creation and verification utilities."""
 
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 import jwt
@@ -26,14 +26,14 @@ def create_access_token(user_id: int, username: str, role: str) -> str:
     settings = get_settings()
     now = datetime.now(timezone.utc)
     payload = {
-        'sub': str(user_id),
-        'username': username,
-        'role': role,
-        'type': 'access',
-        'iat': now,
-        'exp': now + timedelta(seconds=settings.flask.jwt_access_token_expires),
+        "sub": str(user_id),
+        "username": username,
+        "role": role,
+        "type": "access",
+        "iat": now,
+        "exp": now + timedelta(seconds=settings.flask.jwt_access_token_expires),
     }
-    return jwt.encode(payload, settings.flask.jwt_secret_key, algorithm='HS256')
+    return jwt.encode(payload, settings.flask.jwt_secret_key, algorithm="HS256")
 
 
 def create_refresh_token(user_id: int) -> str:
@@ -49,12 +49,12 @@ def create_refresh_token(user_id: int) -> str:
     settings = get_settings()
     now = datetime.now(timezone.utc)
     payload = {
-        'sub': str(user_id),
-        'type': 'refresh',
-        'iat': now,
-        'exp': now + timedelta(seconds=settings.flask.jwt_refresh_token_expires),
+        "sub": str(user_id),
+        "type": "refresh",
+        "iat": now,
+        "exp": now + timedelta(seconds=settings.flask.jwt_refresh_token_expires),
     }
-    return jwt.encode(payload, settings.flask.jwt_secret_key, algorithm='HS256')
+    return jwt.encode(payload, settings.flask.jwt_secret_key, algorithm="HS256")
 
 
 def decode_token(token: str) -> Optional[Dict[str, Any]]:
@@ -69,11 +69,7 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
     """
     settings = get_settings()
     try:
-        payload = jwt.decode(
-            token,
-            settings.flask.jwt_secret_key,
-            algorithms=['HS256']
-        )
+        payload = jwt.decode(token, settings.flask.jwt_secret_key, algorithms=["HS256"])
         return payload
     except jwt.ExpiredSignatureError:
         logger.debug("Token has expired")
@@ -95,13 +91,8 @@ def get_token_remaining_ttl(token: str) -> int:
     """
     settings = get_settings()
     try:
-        payload = jwt.decode(
-            token,
-            settings.flask.jwt_secret_key,
-            algorithms=['HS256'],
-            options={'verify_exp': False}
-        )
-        exp = datetime.fromtimestamp(payload['exp'], tz=timezone.utc)
+        payload = jwt.decode(token, settings.flask.jwt_secret_key, algorithms=["HS256"], options={"verify_exp": False})
+        exp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
         now = datetime.now(timezone.utc)
         remaining = int((exp - now).total_seconds())
         return max(remaining, 0)

@@ -6,7 +6,7 @@ Handles API errors with proper logging and retry logic.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from googleapiclient.discovery import build
@@ -40,7 +40,7 @@ class CalendarClient:
         Args:
             credentials: Valid Google OAuth credentials with calendar scope
         """
-        self.service = build('calendar', 'v3', credentials=credentials)
+        self.service = build("calendar", "v3", credentials=credentials)
         self.calendar_id = settings.calendar.calendar_id
 
     def create_event(self, event_body: Dict[str, Any]) -> Dict[str, Any]:
@@ -58,15 +58,16 @@ class CalendarClient:
             HttpError: If the API call fails
         """
         try:
-            event = self.service.events().insert(
-                calendarId=self.calendar_id,
-                body=event_body,
-            ).execute()
-
-            logger.info(
-                f"Created calendar event: {event.get('id')} - "
-                f"{event.get('summary', 'No title')}"
+            event = (
+                self.service.events()
+                .insert(
+                    calendarId=self.calendar_id,
+                    body=event_body,
+                )
+                .execute()
             )
+
+            logger.info(f"Created calendar event: {event.get('id')} - {event.get('summary', 'No title')}")
             return event
 
         except HttpError as e:
@@ -84,10 +85,14 @@ class CalendarClient:
             Event resource or None if not found
         """
         try:
-            event = self.service.events().get(
-                calendarId=self.calendar_id,
-                eventId=event_id,
-            ).execute()
+            event = (
+                self.service.events()
+                .get(
+                    calendarId=self.calendar_id,
+                    eventId=event_id,
+                )
+                .execute()
+            )
             return event
 
         except HttpError as e:
@@ -117,20 +122,21 @@ class CalendarClient:
             List of event resources
         """
         try:
-            events_result = self.service.events().list(
-                calendarId=self.calendar_id,
-                timeMin=time_min.isoformat() + 'Z',
-                timeMax=time_max.isoformat() + 'Z',
-                maxResults=max_results,
-                singleEvents=True,
-                orderBy='startTime',
-            ).execute()
-
-            events = events_result.get('items', [])
-            logger.debug(
-                f"Found {len(events)} events between "
-                f"{time_min.isoformat()} and {time_max.isoformat()}"
+            events_result = (
+                self.service.events()
+                .list(
+                    calendarId=self.calendar_id,
+                    timeMin=time_min.isoformat() + "Z",
+                    timeMax=time_max.isoformat() + "Z",
+                    maxResults=max_results,
+                    singleEvents=True,
+                    orderBy="startTime",
+                )
+                .execute()
             )
+
+            events = events_result.get("items", [])
+            logger.debug(f"Found {len(events)} events between {time_min.isoformat()} and {time_max.isoformat()}")
             return events
 
         except HttpError as e:
@@ -150,18 +156,22 @@ class CalendarClient:
         Returns:
             List of upcoming event resources
         """
-        now = datetime.utcnow().isoformat() + 'Z'
+        now = datetime.utcnow().isoformat() + "Z"
 
         try:
-            events_result = self.service.events().list(
-                calendarId=self.calendar_id,
-                timeMin=now,
-                maxResults=max_results,
-                singleEvents=True,
-                orderBy='startTime',
-            ).execute()
+            events_result = (
+                self.service.events()
+                .list(
+                    calendarId=self.calendar_id,
+                    timeMin=now,
+                    maxResults=max_results,
+                    singleEvents=True,
+                    orderBy="startTime",
+                )
+                .execute()
+            )
 
-            return events_result.get('items', [])
+            return events_result.get("items", [])
 
         except HttpError as e:
             logger.error(f"Failed to get upcoming events: {e}")
@@ -193,43 +203,39 @@ class CalendarClient:
         """
         try:
             kwargs = {
-                'calendarId': self.calendar_id,
-                'maxResults': max_results,
+                "calendarId": self.calendar_id,
+                "maxResults": max_results,
             }
 
             if sync_token:
                 # syncToken is incompatible with singleEvents per Google API docs
-                kwargs['syncToken'] = sync_token
+                kwargs["syncToken"] = sync_token
             elif updated_min:
-                kwargs['updatedMin'] = updated_min.isoformat() + 'Z'
-                kwargs['orderBy'] = 'updated'
-                kwargs['singleEvents'] = True
+                kwargs["updatedMin"] = updated_min.isoformat() + "Z"
+                kwargs["orderBy"] = "updated"
+                kwargs["singleEvents"] = True
             else:
                 # Full sync without filters
-                kwargs['singleEvents'] = True
+                kwargs["singleEvents"] = True
 
             events_result = self.service.events().list(**kwargs).execute()
 
-            items = events_result.get('items', [])
-            next_sync_token = events_result.get('nextSyncToken')
+            items = events_result.get("items", [])
+            next_sync_token = events_result.get("nextSyncToken")
 
             logger.info(
-                f"Sync returned {len(items)} events, "
-                f"next_sync_token={'present' if next_sync_token else 'none'}"
+                f"Sync returned {len(items)} events, next_sync_token={'present' if next_sync_token else 'none'}"
             )
 
             return {
-                'items': items,
-                'next_sync_token': next_sync_token,
+                "items": items,
+                "next_sync_token": next_sync_token,
             }
 
         except HttpError as e:
             if e.resp.status == 410 and not _is_fallback:
                 # Sync token expired, need full sync (only retry once)
-                logger.warning(
-                    "Sync token expired (410 Gone). "
-                    "Falling back to full sync."
-                )
+                logger.warning("Sync token expired (410 Gone). Falling back to full sync.")
                 return self.list_events_since(
                     updated_min=None,
                     sync_token=None,
@@ -284,11 +290,15 @@ class CalendarClient:
             HttpError: If the API call fails
         """
         try:
-            event = self.service.events().update(
-                calendarId=self.calendar_id,
-                eventId=event_id,
-                body=event_body,
-            ).execute()
+            event = (
+                self.service.events()
+                .update(
+                    calendarId=self.calendar_id,
+                    eventId=event_id,
+                    body=event_body,
+                )
+                .execute()
+            )
 
             logger.info(f"Updated calendar event: {event_id}")
             return event

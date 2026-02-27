@@ -22,14 +22,16 @@ logger = logging.getLogger(__name__)
 
 class ErrorType(Enum):
     """Classification of send errors."""
-    RETRYABLE = "retryable"      # Can retry later (rate limit, server error)
-    PERMANENT = "permanent"       # Cannot retry (bad request, auth error)
-    NETWORK = "network"           # Network issues (may retry)
+
+    RETRYABLE = "retryable"  # Can retry later (rate limit, server error)
+    PERMANENT = "permanent"  # Cannot retry (bad request, auth error)
+    NETWORK = "network"  # Network issues (may retry)
 
 
 @dataclass
 class SendResult:
     """Result of an email send attempt."""
+
     success: bool
     message_id: Optional[str] = None
     thread_id: Optional[str] = None
@@ -102,7 +104,7 @@ class EmailSender:
         in_reply_to: Optional[str] = None,
         references: Optional[str] = None,
         html_body: Optional[str] = None,
-        reply_to: Optional[str] = None
+        reply_to: Optional[str] = None,
     ) -> SendResult:
         """
         Send a response email, optionally as a reply in a thread.
@@ -133,16 +135,12 @@ class EmailSender:
                     in_reply_to=in_reply_to,
                     references=references,
                     html_body=html_body,
-                    reply_to=reply_to
+                    reply_to=reply_to,
                 )
             else:
                 # Send as new email
                 result = self.client.send_email(
-                    to=to,
-                    subject=subject,
-                    body=body,
-                    html_body=html_body,
-                    reply_to=reply_to
+                    to=to, subject=subject, body=body, html_body=html_body, reply_to=reply_to
                 )
 
             logger.info(
@@ -151,30 +149,17 @@ class EmailSender:
                 f"Thread ID: {result.get('threadId')}"
             )
 
-            return SendResult(
-                success=True,
-                message_id=result.get('id'),
-                thread_id=result.get('threadId')
-            )
+            return SendResult(success=True, message_id=result.get("id"), thread_id=result.get("threadId"))
 
         except HttpError as e:
             return self._handle_http_error(e, to)
 
         except Exception as e:
             logger.error(f"Unexpected error sending email to {to}: {e}")
-            return SendResult(
-                success=False,
-                error=str(e),
-                error_type=ErrorType.NETWORK
-            )
+            return SendResult(success=False, error=str(e), error_type=ErrorType.NETWORK)
 
     def send_new_email(
-        self,
-        to: str,
-        subject: str,
-        body: str,
-        html_body: Optional[str] = None,
-        reply_to: Optional[str] = None
+        self, to: str, subject: str, body: str, html_body: Optional[str] = None, reply_to: Optional[str] = None
     ) -> SendResult:
         """
         Send a new email (not a reply).
@@ -189,13 +174,7 @@ class EmailSender:
         Returns:
             SendResult with success status and details
         """
-        return self.send_response(
-            to=to,
-            subject=subject,
-            body=body,
-            html_body=html_body,
-            reply_to=reply_to
-        )
+        return self.send_response(to=to, subject=subject, body=body, html_body=html_body, reply_to=reply_to)
 
     def send_reply(
         self,
@@ -206,7 +185,7 @@ class EmailSender:
         in_reply_to: str,
         references: Optional[str] = None,
         html_body: Optional[str] = None,
-        reply_to: Optional[str] = None
+        reply_to: Optional[str] = None,
     ) -> SendResult:
         """
         Send a reply in an existing thread.
@@ -232,7 +211,7 @@ class EmailSender:
             in_reply_to=in_reply_to,
             references=references,
             html_body=html_body,
-            reply_to=reply_to
+            reply_to=reply_to,
         )
 
     def _handle_http_error(self, error: HttpError, recipient: str) -> SendResult:
@@ -265,15 +244,10 @@ class EmailSender:
             log_level,
             f"Gmail API error sending to {recipient} | "
             f"Status: {status_code} | Type: {error_type.value} | "
-            f"Error: {error_message}"
+            f"Error: {error_message}",
         )
 
-        return SendResult(
-            success=False,
-            error=error_message,
-            error_type=error_type,
-            http_status=status_code
-        )
+        return SendResult(success=False, error=error_message, error_type=error_type, http_status=status_code)
 
     def _ensure_reply_prefix(self, subject: str) -> str:
         """
@@ -285,7 +259,7 @@ class EmailSender:
         Returns:
             Subject with 'Re:' prefix if not already present
         """
-        if subject.lower().startswith('re:'):
+        if subject.lower().startswith("re:"):
             return subject
         return f"Re: {subject}"
 
@@ -304,26 +278,16 @@ def send_response_email(response_data: Dict[str, Any]) -> SendResult:
     """
     sender = EmailSender()
 
-    to = response_data.get('from_address')
-    subject = response_data.get('subject', 'Response from EcoClean')
-    body = response_data.get('draft_content', '')
+    to = response_data.get("from_address")
+    subject = response_data.get("subject", "Response from EcoClean")
+    body = response_data.get("draft_content", "")
 
     # Extract threading information from raw_headers if available
-    raw_headers = response_data.get('raw_headers') or {}
-    thread_id = raw_headers.get('thread_id')
-    message_id = raw_headers.get('Message-ID') or response_data.get('message_id')
+    raw_headers = response_data.get("raw_headers") or {}
+    thread_id = raw_headers.get("thread_id")
+    message_id = raw_headers.get("Message-ID") or response_data.get("message_id")
 
     if thread_id and message_id:
-        return sender.send_reply(
-            to=to,
-            subject=subject,
-            body=body,
-            thread_id=thread_id,
-            in_reply_to=message_id
-        )
+        return sender.send_reply(to=to, subject=subject, body=body, thread_id=thread_id, in_reply_to=message_id)
     else:
-        return sender.send_new_email(
-            to=to,
-            subject=subject,
-            body=body
-        )
+        return sender.send_new_email(to=to, subject=subject, body=body)

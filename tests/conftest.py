@@ -4,9 +4,10 @@ Pytest configuration and shared fixtures.
 Fixtures defined here are available to all tests automatically.
 """
 
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -16,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Pricing Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def pricing_rules():
     """Standard pricing rules for testing."""
@@ -24,7 +26,7 @@ def pricing_rules():
         "apartment": {"base": 80, "per_bedroom": 20, "per_bathroom": 12},
         "condo": {"base": 90, "per_bedroom": 22, "per_bathroom": 13},
         "studio": {"base": 60, "per_bathroom": 10},
-        "office": {"base": 150, "per_sqft": 0.10}
+        "office": {"base": 150, "per_sqft": 0.10},
     }
 
 
@@ -36,13 +38,14 @@ def service_multipliers():
         "deep_clean": {"multiplier": 1.5, "description": "Deep cleaning"},
         "move_in": {"multiplier": 1.6, "description": "Move-in cleaning"},
         "move_out": {"multiplier": 1.8, "description": "Move-out cleaning"},
-        "post_construction": {"multiplier": 2.0, "description": "Post-construction"}
+        "post_construction": {"multiplier": 2.0, "description": "Post-construction"},
     }
 
 
 # =============================================================================
 # Entity Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def sample_entities_house():
@@ -93,6 +96,7 @@ def sample_entities_invalid():
 # =============================================================================
 # Environment Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_env_vars(monkeypatch):

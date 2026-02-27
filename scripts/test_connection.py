@@ -16,17 +16,15 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 def test_postgres_connection() -> bool:
     """Test PostgreSQL database connection."""
-    from config.settings import settings
     import psycopg2
+
+    from config.settings import settings
 
     print("\n--- PostgreSQL Connection Test ---")
     print(f"Host: {settings.database.host}")
@@ -66,19 +64,20 @@ def test_postgres_connection() -> bool:
         return True
 
     except psycopg2.OperationalError as e:
-        print(f"Status: ✗ Connection failed")
+        print("Status: ✗ Connection failed")
         print(f"Error: {e}")
         return False
     except Exception as e:
-        print(f"Status: ✗ Unexpected error")
+        print("Status: ✗ Unexpected error")
         print(f"Error: {e}")
         return False
 
 
 def test_redis_connection() -> bool:
     """Test Redis connection."""
-    from config.settings import settings
     import redis
+
+    from config.settings import settings
 
     print("\n--- Redis Connection Test ---")
     print(f"Host: {settings.redis.host}")
@@ -91,7 +90,7 @@ def test_redis_connection() -> bool:
             port=settings.redis.port,
             db=settings.redis.db,
             password=settings.redis.password,
-            decode_responses=True
+            decode_responses=True,
         )
 
         # Test connection
@@ -99,26 +98,26 @@ def test_redis_connection() -> bool:
         assert pong is True, "Ping failed"
 
         # Get server info
-        info = r.info('server')
+        info = r.info("server")
         print(f"Version: {info.get('redis_version', 'unknown')}")
 
         # Test basic operations
-        test_key = '__connection_test__'
-        r.set(test_key, 'hello')
+        test_key = "__connection_test__"
+        r.set(test_key, "hello")
         value = r.get(test_key)
         r.delete(test_key)
 
-        assert value == 'hello', "Get/Set test failed"
+        assert value == "hello", "Get/Set test failed"
 
         print("Status: ✓ Connected successfully")
         return True
 
     except redis.ConnectionError as e:
-        print(f"Status: ✗ Connection failed")
+        print("Status: ✗ Connection failed")
         print(f"Error: {e}")
         return False
     except Exception as e:
-        print(f"Status: ✗ Unexpected error")
+        print("Status: ✗ Unexpected error")
         print(f"Error: {e}")
         return False
 
@@ -131,11 +130,7 @@ def test_database_pool() -> bool:
     print("\n--- Connection Pool Test ---")
 
     try:
-        db = Database(
-            connection_string=settings.database.dsn,
-            min_conn=2,
-            max_conn=5
-        )
+        db = Database(connection_string=settings.database.dsn, min_conn=2, max_conn=5)
 
         # Test using context manager
         with db.get_cursor() as cur:
@@ -146,8 +141,7 @@ def test_database_pool() -> bool:
 
         # Test execute_query
         result = db.execute_query(
-            "SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = 'public';",
-            fetch='one'
+            "SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = 'public';", fetch="one"
         )
         print(f"Public tables: {result['count']}")
 
@@ -159,7 +153,7 @@ def test_database_pool() -> bool:
         return True
 
     except Exception as e:
-        print(f"Status: ✗ Pool test failed")
+        print("Status: ✗ Pool test failed")
         print(f"Error: {e}")
         return False
 
@@ -196,7 +190,7 @@ def test_repositories() -> bool:
         return True
 
     except Exception as e:
-        print(f"Status: ✗ Repository test failed")
+        print("Status: ✗ Repository test failed")
         print(f"Error: {e}")
         return False
 
@@ -213,7 +207,7 @@ def test_settings() -> bool:
         print(f"Log level: {settings.app.log_level}")
 
         # Check if Claude API key is configured
-        if settings.claude.api_key and settings.claude.api_key != 'your_anthropic_api_key_here':
+        if settings.claude.api_key and settings.claude.api_key != "your_anthropic_api_key_here":
             print(f"Claude API: ✓ Configured (model: {settings.claude.model})")
         else:
             print("Claude API: ✗ Not configured (set ANTHROPIC_API_KEY in .env)")
@@ -222,7 +216,7 @@ def test_settings() -> bool:
         return True
 
     except Exception as e:
-        print(f"Status: ✗ Settings test failed")
+        print("Status: ✗ Settings test failed")
         print(f"Error: {e}")
         return False
 
@@ -234,11 +228,11 @@ def main():
     print("=" * 50)
 
     results = {
-        'settings': test_settings(),
-        'postgres': test_postgres_connection(),
-        'redis': test_redis_connection(),
-        'pool': test_database_pool(),
-        'repositories': test_repositories(),
+        "settings": test_settings(),
+        "postgres": test_postgres_connection(),
+        "redis": test_redis_connection(),
+        "pool": test_database_pool(),
+        "repositories": test_repositories(),
     }
 
     # Summary
@@ -271,5 +265,5 @@ def main():
     return 0 if all_passed else 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

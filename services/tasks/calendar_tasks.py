@@ -38,7 +38,7 @@ def _get_calendar_client():
 
 @shared_task(
     bind=True,
-    name='services.tasks.calendar_tasks.create_calendar_event_task',
+    name="services.tasks.calendar_tasks.create_calendar_event_task",
     max_retries=3,
     default_retry_delay=60,
     autoretry_for=(Exception,),
@@ -67,17 +67,17 @@ def create_calendar_event_task(
     if not settings.calendar.is_configured():
         logger.debug("Calendar integration not enabled, skipping")
         return {
-            'status': 'skipped',
-            'reason': 'calendar_not_enabled',
+            "status": "skipped",
+            "reason": "calendar_not_enabled",
         }
 
     logger.info(f"Creating calendar event for response {response_id}")
 
     try:
         from database.connection import get_database
-        from database.schema import EntityRepository, ResponseRepository
         from database.queries import calendar as cal_queries
-        from services.calendar.events import EventBuilder, ConflictChecker
+        from database.schema import EntityRepository, ResponseRepository
+        from services.calendar.events import ConflictChecker, EventBuilder
 
         db = get_database()
         response_repo = ResponseRepository(db)
@@ -88,29 +88,26 @@ def create_calendar_event_task(
         if not response:
             logger.error(f"Response {response_id} not found")
             return {
-                'status': 'error',
-                'response_id': response_id,
-                'error': 'Response not found',
+                "status": "error",
+                "response_id": response_id,
+                "error": "Response not found",
             }
 
         # Get extracted entities
-        email_id = response['email_id']
+        email_id = response["email_id"]
         entities = entity_repo.get_entities_as_dict(email_id)
 
         if not entities:
-            logger.warning(
-                f"No entities found for email {email_id}, "
-                f"cannot create calendar event"
-            )
+            logger.warning(f"No entities found for email {email_id}, cannot create calendar event")
             db.execute_query(
                 cal_queries.UPDATE_RESPONSE_CALENDAR_FAILED,
                 params=(response_id,),
-                fetch='one',
+                fetch="one",
             )
             return {
-                'status': 'skipped',
-                'response_id': response_id,
-                'reason': 'no_entities',
+                "status": "skipped",
+                "response_id": response_id,
+                "reason": "no_entities",
             }
 
         # Build the event
@@ -122,18 +119,17 @@ def create_calendar_event_task(
 
         if event_body is None:
             logger.warning(
-                f"Could not build calendar event for response {response_id}: "
-                f"no parseable date/time in entities"
+                f"Could not build calendar event for response {response_id}: no parseable date/time in entities"
             )
             db.execute_query(
                 cal_queries.UPDATE_RESPONSE_CALENDAR_FAILED,
                 params=(response_id,),
-                fetch='one',
+                fetch="one",
             )
             return {
-                'status': 'skipped',
-                'response_id': response_id,
-                'reason': 'no_datetime',
+                "status": "skipped",
+                "response_id": response_id,
+                "reason": "no_datetime",
             }
 
         # Check for conflicts
@@ -152,7 +148,7 @@ def create_calendar_event_task(
                 db.execute_query(
                     cal_queries.UPDATE_RESPONSE_CALENDAR_CONFLICT,
                     params=(conflict_json, response_id),
-                    fetch='one',
+                    fetch="one",
                 )
 
                 # Notify admin via Telegram
@@ -160,6 +156,7 @@ def create_calendar_event_task(
                     from services.telegram.notifications import (
                         notify_calendar_conflict,
                     )
+
                     notify_calendar_conflict(
                         response_id=response_id,
                         proposed_start=start_dt,
@@ -167,35 +164,34 @@ def create_calendar_event_task(
                         conflicts=conflict_info,
                     )
                 except Exception as e:
-                    logger.warning(
-                        f"Failed to send conflict notification: {e}"
-                    )
+                    logger.warning(f"Failed to send conflict notification: {e}")
 
                 return {
-                    'status': 'conflict',
-                    'response_id': response_id,
-                    'conflicts': conflict_info,
+                    "status": "conflict",
+                    "response_id": response_id,
+                    "conflicts": conflict_info,
                 }
 
         # No conflicts - create the event
         client = _get_calendar_client()
         created_event = client.create_event(event_body)
 
-        google_event_id = created_event.get('id')
-        event_link = created_event.get('htmlLink', '')
+        google_event_id = created_event.get("id")
+        event_link = created_event.get("htmlLink", "")
 
         # Update response with calendar info
         db.execute_query(
             cal_queries.UPDATE_RESPONSE_CALENDAR_STATUS,
-            params=(google_event_id, 'created', response_id),
-            fetch='one',
+            params=(google_event_id, "created", response_id),
+            fetch="one",
         )
 
         # Store in calendar_events table
-        start_str = event_body['start']['dateTime']
-        end_str = event_body['end']['dateTime']
+        start_str = event_body["start"]["dateTime"]
+        end_str = event_body["end"]["dateTime"]
 
         from dateutil import parser as dateutil_parser
+
         start_dt = dateutil_parser.parse(start_str)
         end_dt = dateutil_parser.parse(end_str)
 
@@ -204,19 +200,19 @@ def create_calendar_event_task(
             params=(
                 google_event_id,
                 response_id,
-                event_body.get('summary', ''),
-                event_body.get('description', ''),
-                event_body.get('location', ''),
+                event_body.get("summary", ""),
+                event_body.get("description", ""),
+                event_body.get("location", ""),
                 start_dt,
                 end_dt,
-                entities.get('contact_name'),
-                entities.get('contact_phone'),
-                entities.get('service_type'),
-                'system',
-                created_event.get('updated'),
+                entities.get("contact_name"),
+                entities.get("contact_phone"),
+                entities.get("service_type"),
+                "system",
+                created_event.get("updated"),
                 start_dt,  # synced_at
             ),
-            fetch='one',
+            fetch="one",
         )
 
         # Notify admin via Telegram
@@ -224,34 +220,26 @@ def create_calendar_event_task(
             from services.telegram.notifications import (
                 notify_calendar_created,
             )
+
             notify_calendar_created(response_id, event_link)
         except Exception as e:
-            logger.warning(
-                f"Failed to send calendar created notification: {e}"
-            )
+            logger.warning(f"Failed to send calendar created notification: {e}")
 
-        logger.info(
-            f"Calendar event created for response {response_id}: "
-            f"{google_event_id}"
-        )
+        logger.info(f"Calendar event created for response {response_id}: {google_event_id}")
 
         return {
-            'status': 'created',
-            'response_id': response_id,
-            'google_event_id': google_event_id,
-            'event_link': event_link,
+            "status": "created",
+            "response_id": response_id,
+            "google_event_id": google_event_id,
+            "event_link": event_link,
         }
 
     except SoftTimeLimitExceeded:
-        logger.warning(
-            f"Calendar task hit soft time limit for response {response_id}"
-        )
+        logger.warning(f"Calendar task hit soft time limit for response {response_id}")
         raise
 
     except Exception as e:
-        logger.error(
-            f"Failed to create calendar event for response {response_id}: {e}"
-        )
+        logger.error(f"Failed to create calendar event for response {response_id}: {e}")
         # Mark as failed in DB
         try:
             from database.connection import get_database
@@ -261,7 +249,7 @@ def create_calendar_event_task(
             db.execute_query(
                 cal_queries.UPDATE_RESPONSE_CALENDAR_FAILED,
                 params=(response_id,),
-                fetch='one',
+                fetch="one",
             )
         except Exception:
             pass
@@ -271,7 +259,7 @@ def create_calendar_event_task(
 
 @shared_task(
     bind=True,
-    name='services.tasks.calendar_tasks.force_create_calendar_event_task',
+    name="services.tasks.calendar_tasks.force_create_calendar_event_task",
     max_retries=2,
     default_retry_delay=30,
 )
@@ -291,16 +279,14 @@ def force_create_calendar_event_task(
         Dict with creation result
     """
     if not settings.calendar.is_configured():
-        return {'status': 'skipped', 'reason': 'calendar_not_enabled'}
+        return {"status": "skipped", "reason": "calendar_not_enabled"}
 
-    logger.info(
-        f"Force-creating calendar event for response {response_id}"
-    )
+    logger.info(f"Force-creating calendar event for response {response_id}")
 
     try:
         from database.connection import get_database
-        from database.schema import EntityRepository, ResponseRepository
         from database.queries import calendar as cal_queries
+        from database.schema import EntityRepository, ResponseRepository
         from services.calendar.events import EventBuilder
 
         db = get_database()
@@ -310,12 +296,12 @@ def force_create_calendar_event_task(
         response = response_repo.get_response_with_email(response_id)
         if not response:
             return {
-                'status': 'error',
-                'response_id': response_id,
-                'error': 'Response not found',
+                "status": "error",
+                "response_id": response_id,
+                "error": "Response not found",
             }
 
-        email_id = response['email_id']
+        email_id = response["email_id"]
         entities = entity_repo.get_entities_as_dict(email_id)
 
         builder = EventBuilder()
@@ -326,30 +312,31 @@ def force_create_calendar_event_task(
 
         if event_body is None:
             return {
-                'status': 'error',
-                'response_id': response_id,
-                'error': 'Cannot build event (no date/time)',
+                "status": "error",
+                "response_id": response_id,
+                "error": "Cannot build event (no date/time)",
             }
 
         # Create event without conflict check
         client = _get_calendar_client()
         created_event = client.create_event(event_body)
 
-        google_event_id = created_event.get('id')
-        event_link = created_event.get('htmlLink', '')
+        google_event_id = created_event.get("id")
+        event_link = created_event.get("htmlLink", "")
 
         # Update response
         db.execute_query(
             cal_queries.UPDATE_RESPONSE_CALENDAR_STATUS,
-            params=(google_event_id, 'created', response_id),
-            fetch='one',
+            params=(google_event_id, "created", response_id),
+            fetch="one",
         )
 
         # Store in calendar_events
-        start_str = event_body['start']['dateTime']
-        end_str = event_body['end']['dateTime']
+        start_str = event_body["start"]["dateTime"]
+        end_str = event_body["end"]["dateTime"]
 
         from dateutil import parser as dateutil_parser
+
         start_dt = dateutil_parser.parse(start_str)
         end_dt = dateutil_parser.parse(end_str)
 
@@ -358,19 +345,19 @@ def force_create_calendar_event_task(
             params=(
                 google_event_id,
                 response_id,
-                event_body.get('summary', ''),
-                event_body.get('description', ''),
-                event_body.get('location', ''),
+                event_body.get("summary", ""),
+                event_body.get("description", ""),
+                event_body.get("location", ""),
                 start_dt,
                 end_dt,
-                entities.get('contact_name'),
-                entities.get('contact_phone'),
-                entities.get('service_type'),
-                'system',
-                created_event.get('updated'),
+                entities.get("contact_name"),
+                entities.get("contact_phone"),
+                entities.get("service_type"),
+                "system",
+                created_event.get("updated"),
                 start_dt,
             ),
-            fetch='one',
+            fetch="one",
         )
 
         # Notify
@@ -378,29 +365,27 @@ def force_create_calendar_event_task(
             from services.telegram.notifications import (
                 notify_calendar_created,
             )
+
             notify_calendar_created(response_id, event_link)
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
 
         return {
-            'status': 'created',
-            'response_id': response_id,
-            'google_event_id': google_event_id,
-            'event_link': event_link,
-            'forced': True,
+            "status": "created",
+            "response_id": response_id,
+            "google_event_id": google_event_id,
+            "event_link": event_link,
+            "forced": True,
         }
 
     except Exception as e:
-        logger.error(
-            f"Failed to force-create calendar event for "
-            f"response {response_id}: {e}"
-        )
-        raise self.retry(exc=e)
+        logger.error(f"Failed to force-create calendar event for response {response_id}: {e}")
+        raise self.retry(exc=e) from e
 
 
 @shared_task(
     bind=True,
-    name='services.tasks.calendar_tasks.sync_calendar_events_task',
+    name="services.tasks.calendar_tasks.sync_calendar_events_task",
     max_retries=2,
     default_retry_delay=120,
 )
@@ -415,7 +400,7 @@ def sync_calendar_events_task(self) -> Dict[str, Any]:
         Dict with sync results
     """
     if not settings.calendar.is_configured():
-        return {'status': 'skipped', 'reason': 'calendar_not_enabled'}
+        return {"status": "skipped", "reason": "calendar_not_enabled"}
 
     logger.info("Starting calendar sync task")
 
@@ -430,28 +415,27 @@ def sync_calendar_events_task(self) -> Dict[str, Any]:
         result = sync.sync_from_google()
 
         # Notify admin about manually-added events
-        if result.get('manual_events', 0) > 0:
+        if result.get("manual_events", 0) > 0:
             try:
+                # Get recently synced manual events for notification
+                from database.queries import calendar as cal_queries
                 from services.telegram.notifications import (
                     notify_manual_event_synced,
                 )
-                # Get recently synced manual events for notification
-                from database.queries import calendar as cal_queries
+
                 manual_events = db.execute_query(
                     cal_queries.GET_MANUAL_EVENTS,
-                    params=(result['manual_events'],),
-                    fetch='all',
+                    params=(result["manual_events"],),
+                    fetch="all",
                 )
                 if manual_events:
                     for event in manual_events:
                         notify_manual_event_synced(dict(event))
             except Exception as e:
-                logger.warning(
-                    f"Failed to send manual event notification: {e}"
-                )
+                logger.warning(f"Failed to send manual event notification: {e}")
 
         return {
-            'status': 'success',
+            "status": "success",
             **result,
         }
 
@@ -461,4 +445,4 @@ def sync_calendar_events_task(self) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Calendar sync task failed: {e}")
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e

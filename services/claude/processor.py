@@ -10,9 +10,9 @@ from typing import Any, Dict, List, Optional
 
 from anthropic import Anthropic
 
-from .client import get_claude_client
 from .classifier import classify_email
-from .extractor import extract_entities, entities_to_dict
+from .client import get_claude_client
+from .extractor import entities_to_dict, extract_entities
 from .responder import generate_response
 
 logger = logging.getLogger(__name__)
@@ -38,9 +38,7 @@ DEFAULT_SERVICE_MULTIPLIERS = {
 
 
 def calculate_quote(
-    entities: List[Dict],
-    pricing_rules: Optional[Dict] = None,
-    service_multipliers: Optional[Dict] = None
+    entities: List[Dict], pricing_rules: Optional[Dict] = None, service_multipliers: Optional[Dict] = None
 ) -> Optional[Dict]:
     """
     Calculate a quote based on extracted entities.
@@ -84,10 +82,7 @@ def calculate_quote(
         num_bedrooms = int(float(bedrooms.split()[0]))
         if num_bedrooms > 0 and "per_bedroom" in pricing:
             bedroom_charge = num_bedrooms * pricing["per_bedroom"]
-            adjustments.append({
-                "description": f"{num_bedrooms} bedroom(s)",
-                "amount": bedroom_charge
-            })
+            adjustments.append({"description": f"{num_bedrooms} bedroom(s)", "amount": bedroom_charge})
     except (ValueError, IndexError):
         pass
 
@@ -98,10 +93,7 @@ def calculate_quote(
         num_bathrooms = float(bathrooms.split()[0])
         if num_bathrooms > 0 and "per_bathroom" in pricing:
             bathroom_charge = num_bathrooms * pricing["per_bathroom"]
-            adjustments.append({
-                "description": f"{num_bathrooms} bathroom(s)",
-                "amount": bathroom_charge
-            })
+            adjustments.append({"description": f"{num_bathrooms} bathroom(s)", "amount": bathroom_charge})
     except (ValueError, IndexError):
         pass
 
@@ -116,11 +108,10 @@ def calculate_quote(
     multiplier = multiplier_data.get("multiplier", 1.0)
 
     if multiplier != 1.0:
-        service_desc = service_type.replace('_', ' ').title()
-        adjustments.append({
-            "description": f"{service_desc} service ({multiplier}x)",
-            "amount": subtotal * (multiplier - 1)
-        })
+        service_desc = service_type.replace("_", " ").title()
+        adjustments.append(
+            {"description": f"{service_desc} service ({multiplier}x)", "amount": subtotal * (multiplier - 1)}
+        )
 
     total = subtotal * multiplier
 
@@ -130,7 +121,7 @@ def calculate_quote(
         "adjustments": adjustments,
         "subtotal": subtotal,
         "multiplier": multiplier,
-        "total": total
+        "total": total,
     }
 
     logger.info(f"Calculated quote: ${total:.2f} for {property_type}")
@@ -142,7 +133,7 @@ def process_email_with_claude(
     from_address: str = "",
     subject: str = "",
     generate_response_flag: bool = True,
-    client: Optional[Anthropic] = None
+    client: Optional[Anthropic] = None,
 ) -> Dict[str, Any]:
     """
     Process an email through the full Claude pipeline.
@@ -176,24 +167,13 @@ def process_email_with_claude(
 
     # Step 1: Classification
     logger.debug("Step 1: Classifying intent...")
-    classification = classify_email(
-        body=body,
-        from_address=from_address,
-        subject=subject,
-        client=client
-    )
+    classification = classify_email(body=body, from_address=from_address, subject=subject, client=client)
     result["classification"] = classification
     intent = classification["intent"]
 
     # Step 2: Entity Extraction
     logger.debug("Step 2: Extracting entities...")
-    entities = extract_entities(
-        body=body,
-        intent=intent,
-        from_address=from_address,
-        subject=subject,
-        client=client
-    )
+    entities = extract_entities(body=body, intent=intent, from_address=from_address, subject=subject, client=client)
     result["entities"] = entities
 
     # Step 3: Quote Calculation (if applicable)
@@ -216,7 +196,7 @@ def process_email_with_claude(
             from_address=from_address,
             subject=subject,
             quote_data=quote_data,
-            client=client
+            client=client,
         )
         result["response"] = response
     else:

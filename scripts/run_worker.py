@@ -27,37 +27,31 @@ sys.path.insert(0, str(project_root))
 
 def main():
     """Run the Celery worker."""
-    parser = argparse.ArgumentParser(description='Start Celery worker')
+    parser = argparse.ArgumentParser(description="Start Celery worker")
+    parser.add_argument("--beat", action="store_true", help="Enable beat scheduler for periodic tasks")
     parser.add_argument(
-        '--beat',
-        action='store_true',
-        help='Enable beat scheduler for periodic tasks'
-    )
-    parser.add_argument(
-        '--queues', '-Q',
+        "--queues",
+        "-Q",
         type=str,
-        default='default,email_fetch,email_process',
-        help='Comma-separated list of queues to consume from'
+        default="default,email_fetch,email_process",
+        help="Comma-separated list of queues to consume from",
     )
+    parser.add_argument("--concurrency", "-c", type=int, default=2, help="Number of concurrent worker processes")
     parser.add_argument(
-        '--concurrency', '-c',
-        type=int,
-        default=2,
-        help='Number of concurrent worker processes'
-    )
-    parser.add_argument(
-        '--loglevel', '-l',
+        "--loglevel",
+        "-l",
         type=str,
-        default='info',
-        choices=['debug', 'info', 'warning', 'error', 'critical'],
-        help='Logging level'
+        default="info",
+        choices=["debug", "info", "warning", "error", "critical"],
+        help="Logging level",
     )
     parser.add_argument(
-        '--pool', '-P',
+        "--pool",
+        "-P",
         type=str,
-        default='prefork',
-        choices=['prefork', 'eventlet', 'gevent', 'solo'],
-        help='Worker pool type'
+        default="prefork",
+        choices=["prefork", "eventlet", "gevent", "solo"],
+        help="Worker pool type",
     )
 
     args = parser.parse_args()
@@ -67,15 +61,15 @@ def main():
 
     # Build worker arguments
     worker_args = [
-        'worker',
-        f'--loglevel={args.loglevel}',
-        f'--concurrency={args.concurrency}',
-        f'--queues={args.queues}',
-        f'--pool={args.pool}',
+        "worker",
+        f"--loglevel={args.loglevel}",
+        f"--concurrency={args.concurrency}",
+        f"--queues={args.queues}",
+        f"--pool={args.pool}",
     ]
 
     if args.beat:
-        worker_args.append('--beat')
+        worker_args.append("--beat")
 
     print(f"Starting Celery worker with args: {worker_args}")
     print(f"Queues: {args.queues}")
@@ -89,5 +83,5 @@ def main():
     app.worker_main(argv=worker_args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

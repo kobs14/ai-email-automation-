@@ -10,10 +10,10 @@ Provides:
 
 from .connection import Database
 from .schema import (
+    ConfigRepository,
     EmailRepository,
     EntityRepository,
     ResponseRepository,
-    ConfigRepository,
     UserRepository,
 )
 

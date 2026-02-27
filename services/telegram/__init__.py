@@ -13,12 +13,12 @@ Components:
 
 from .notifications import (
     notify_new_draft,
-    notify_send_success,
     notify_send_failure,
+    notify_send_success,
 )
 
 __all__ = [
-    'notify_new_draft',
-    'notify_send_success',
-    'notify_send_failure',
+    "notify_new_draft",
+    "notify_send_success",
+    "notify_send_failure",
 ]

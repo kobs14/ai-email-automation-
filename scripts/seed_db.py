@@ -18,14 +18,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config.settings import settings
-from database.migrations.migrate import MigrationRunner
 from database.connection import Database
+from database.migrations.migrate import MigrationRunner
 from database.schema import ConfigRepository
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +39,7 @@ def seed_database() -> bool:
 
     # Run specifically the seed data migration
     # The UPSERT queries make this safe to run multiple times
-    seed_file = Path(__file__).parent.parent / 'database' / 'migrations' / '002_seed_data.sql'
+    seed_file = Path(__file__).parent.parent / "database" / "migrations" / "002_seed_data.sql"
 
     if not seed_file.exists():
         logger.error(f"Seed file not found: {seed_file}")
@@ -66,13 +63,13 @@ def verify_seed_data() -> None:
     try:
         # Check each config key
         configs = [
-            'pricing_rules',
-            'service_multipliers',
-            'addon_services',
-            'business_info',
-            'brand_voice',
-            'response_templates',
-            'entity_extraction_rules'
+            "pricing_rules",
+            "service_multipliers",
+            "addon_services",
+            "business_info",
+            "brand_voice",
+            "response_templates",
+            "entity_extraction_rules",
         ]
 
         print("\nConfiguration status:")
@@ -91,7 +88,7 @@ def verify_seed_data() -> None:
         pricing = config_repo.get_pricing_rules()
         if pricing:
             print("\nSample pricing (house):")
-            house_pricing = pricing.get('house', {})
+            house_pricing = pricing.get("house", {})
             print(f"  Base: ${house_pricing.get('base', 'N/A')}")
             print(f"  Per bedroom: ${house_pricing.get('per_bedroom', 'N/A')}")
             print(f"  Per bathroom: ${house_pricing.get('per_bathroom', 'N/A')}")
@@ -121,5 +118,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

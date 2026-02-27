@@ -86,9 +86,9 @@ def register_rate_limiter(app: Flask) -> None:
 
     @app.before_request
     def check_rate_limit():
-        if request.path == '/api/health':
+        if request.path == "/api/health":
             return None
 
-        client_ip = request.remote_addr or '0.0.0.0'
+        client_ip = request.remote_addr or "0.0.0.0"
         if not limiter.check_rate_limit(client_ip):
-            raise APIError('Rate limit exceeded', status_code=429)
+            raise APIError("Rate limit exceeded", status_code=429)

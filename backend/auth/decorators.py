@@ -36,23 +36,23 @@ def _extract_token() -> Tuple[str, dict]:
     Raises:
         APIError: If token is missing, invalid, or blacklisted
     """
-    auth_header = request.headers.get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
-        raise APIError('Missing or invalid Authorization header', status_code=401)
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise APIError("Missing or invalid Authorization header", status_code=401)
 
     token = auth_header[7:]
     payload = decode_token(token)
     if payload is None:
-        raise APIError('Invalid or expired token', status_code=401)
+        raise APIError("Invalid or expired token", status_code=401)
 
-    if payload.get('type') != 'access':
-        raise APIError('Invalid token type', status_code=401)
+    if payload.get("type") != "access":
+        raise APIError("Invalid token type", status_code=401)
 
     # Check token blacklist
     try:
         r = _get_redis_client()
-        if r.exists(f'token_blacklist:{token}'):
-            raise APIError('Token has been revoked', status_code=401)
+        if r.exists(f"token_blacklist:{token}"):
+            raise APIError("Token has been revoked", status_code=401)
     except redis.ConnectionError:
         logger.warning("Redis unavailable for token blacklist check")
 
@@ -66,16 +66,18 @@ def jwt_required(f):
     Sets g.current_user with {id, username, role} from the token.
     Sets g.raw_token with the raw token string.
     """
+
     @wraps(f)
     def decorated(*args, **kwargs):
         token, payload = _extract_token()
         g.current_user = {
-            'id': int(payload['sub']),
-            'username': payload['username'],
-            'role': payload['role'],
+            "id": int(payload["sub"]),
+            "username": payload["username"],
+            "role": payload["role"],
         }
         g.raw_token = token
         return f(*args, **kwargs)
+
     return decorated
 
 
@@ -95,22 +97,22 @@ def role_required(*roles):
         def admin_view():
             ...
     """
+
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
             token, payload = _extract_token()
             g.current_user = {
-                'id': int(payload['sub']),
-                'username': payload['username'],
-                'role': payload['role'],
+                "id": int(payload["sub"]),
+                "username": payload["username"],
+                "role": payload["role"],
             }
             g.raw_token = token
 
-            if payload['role'] not in roles:
-                raise APIError(
-                    'Insufficient permissions',
-                    status_code=403
-                )
+            if payload["role"] not in roles:
+                raise APIError("Insufficient permissions", status_code=403)
             return f(*args, **kwargs)
+
         return decorated
+
     return decorator

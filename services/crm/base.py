@@ -70,9 +70,7 @@ class BaseCRMProvider(ABC):
         ...
 
     @abstractmethod
-    def update_customer(
-        self, crm_id: str, updates: Dict[str, Any]
-    ) -> CRMCustomer:
+    def update_customer(self, crm_id: str, updates: Dict[str, Any]) -> CRMCustomer:
         """
         Update an existing customer record.
 
@@ -90,9 +88,7 @@ class BaseCRMProvider(ABC):
         ...
 
     @abstractmethod
-    def get_or_create_customer(
-        self, email: str, defaults: Optional[Dict[str, Any]] = None
-    ) -> Tuple[CRMCustomer, bool]:
+    def get_or_create_customer(self, email: str, defaults: Optional[Dict[str, Any]] = None) -> Tuple[CRMCustomer, bool]:
         """
         Find an existing customer by email, or create one with *defaults*.
 
@@ -111,9 +107,7 @@ class BaseCRMProvider(ABC):
     # ------------------------------------------------------------------
 
     @abstractmethod
-    def log_interaction(
-        self, customer_id: str, interaction: CRMInteraction
-    ) -> bool:
+    def log_interaction(self, customer_id: str, interaction: CRMInteraction) -> bool:
         """
         Record an interaction against a customer.
 
@@ -127,9 +121,7 @@ class BaseCRMProvider(ABC):
         ...
 
     @abstractmethod
-    def get_customer_interactions(
-        self, customer_id: str, limit: int = 20
-    ) -> List[CRMInteraction]:
+    def get_customer_interactions(self, customer_id: str, limit: int = 20) -> List[CRMInteraction]:
         """
         Retrieve recent interactions for a customer.
 

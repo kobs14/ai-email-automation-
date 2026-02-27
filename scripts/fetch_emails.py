@@ -23,10 +23,8 @@ Usage:
 """
 
 import argparse
-import json
 import logging
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
@@ -35,14 +33,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config.settings import settings
 from database.connection import Database
-from database.schema import EmailRepository, EntityRepository, ResponseRepository, ConfigRepository
-from services.gmail import GmailAuth, GmailClient, EmailParser
+from database.schema import ConfigRepository, EmailRepository, EntityRepository, ResponseRepository
+from services.gmail import EmailParser, GmailAuth, GmailClient
 from services.gmail.parser import ParsedEmail
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -53,12 +48,7 @@ class EmailIngestionService:
     Coordinates between Gmail API, parser, and database repositories.
     """
 
-    def __init__(
-        self,
-        gmail_client: GmailClient,
-        db: Database,
-        mark_as_read: bool = True
-    ):
+    def __init__(self, gmail_client: GmailClient, db: Database, mark_as_read: bool = True):
         """
         Initialize ingestion service.
 
@@ -73,12 +63,7 @@ class EmailIngestionService:
         self.email_repo = EmailRepository(db)
         self.mark_as_read = mark_as_read
 
-    def fetch_and_store(
-        self,
-        max_results: int = 10,
-        query: Optional[str] = None,
-        dry_run: bool = False
-    ) -> List[int]:
+    def fetch_and_store(self, max_results: int = 10, query: Optional[str] = None, dry_run: bool = False) -> List[int]:
         """
         Fetch emails from Gmail and store in database.
 
@@ -107,7 +92,7 @@ class EmailIngestionService:
         errors = 0
 
         for msg_meta in messages:
-            gmail_id = msg_meta['id']
+            gmail_id = msg_meta["id"]
 
             try:
                 # Check if already exists in database
@@ -142,10 +127,7 @@ class EmailIngestionService:
                 errors += 1
                 continue
 
-        logger.info(
-            f"Ingestion complete: {len(created_ids)} stored, "
-            f"{skipped} skipped, {errors} errors"
-        )
+        logger.info(f"Ingestion complete: {len(created_ids)} stored, {skipped} skipped, {errors} errors")
 
         return created_ids
 
@@ -165,17 +147,13 @@ class EmailIngestionService:
             subject=parsed.subject,
             body=parsed.body,
             received_at=parsed.received_at,
-            raw_headers=parsed.raw_headers
+            raw_headers=parsed.raw_headers,
         )
 
         return email_id
 
 
-def process_emails_with_ai(
-    email_ids: List[int],
-    db: Database,
-    skip_ai: bool = False
-) -> dict:
+def process_emails_with_ai(email_ids: List[int], db: Database, skip_ai: bool = False) -> dict:
     """
     Process stored emails through AI classification pipeline.
 
@@ -188,11 +166,11 @@ def process_emails_with_ai(
         Processing results summary
     """
     from proof_of_concept.claude_test import (
+        calculate_quote,
         classify_email,
         extract_entities,
         generate_response,
-        calculate_quote,
-        get_claude_client
+        get_claude_client,
     )
 
     email_repo = EmailRepository(db)
@@ -208,11 +186,7 @@ def process_emails_with_ai(
 
     client = None if skip_ai else get_claude_client()
 
-    results = {
-        'processed': 0,
-        'errors': 0,
-        'details': []
-    }
+    results = {"processed": 0, "errors": 0, "details": []}
 
     for email_id in email_ids:
         try:
@@ -224,20 +198,16 @@ def process_emails_with_ai(
 
             # Classify
             if skip_ai:
-                classification = {
-                    'intent': 'quote_request',
-                    'confidence': 0.9,
-                    'reasoning': 'Mock classification'
-                }
+                classification = {"intent": "quote_request", "confidence": 0.9, "reasoning": "Mock classification"}
             else:
                 classification = classify_email(
-                    email_body=email['body'],
-                    from_address=email['from_address'],
-                    subject=email['subject'],
-                    client=client
+                    email_body=email["body"],
+                    from_address=email["from_address"],
+                    subject=email["subject"],
+                    client=client,
                 )
 
-            email_repo.update_intent(email_id, classification['intent'])
+            email_repo.update_intent(email_id, classification["intent"])
             logger.info(f"  Classified as: {classification['intent']}")
 
             # Extract entities
@@ -245,11 +215,11 @@ def process_emails_with_ai(
                 entities = []
             else:
                 entities = extract_entities(
-                    email_body=email['body'],
-                    intent=classification['intent'],
-                    from_address=email['from_address'],
-                    subject=email['subject'],
-                    client=client
+                    email_body=email["body"],
+                    intent=classification["intent"],
+                    from_address=email["from_address"],
+                    subject=email["subject"],
+                    client=client,
                 )
 
             if entities:
@@ -258,46 +228,48 @@ def process_emails_with_ai(
 
             # Calculate quote if applicable
             quote_data = None
-            if classification['intent'] == 'quote_request' and entities:
+            if classification["intent"] == "quote_request" and entities:
                 quote_data = calculate_quote(
-                    entities,
-                    pricing_rules=pricing_rules,
-                    service_multipliers=service_multipliers
+                    entities, pricing_rules=pricing_rules, service_multipliers=service_multipliers
                 )
                 if quote_data:
                     logger.info(f"  Quote: ${quote_data['total']:.2f}")
 
             # Generate response
             if skip_ai:
-                response_text = f"Thank you for your {classification['intent'].replace('_', ' ')}. We will respond shortly."
+                response_text = (
+                    f"Thank you for your {classification['intent'].replace('_', ' ')}. We will respond shortly."
+                )
             else:
                 response_text = generate_response(
-                    email_body=email['body'],
-                    intent=classification['intent'],
+                    email_body=email["body"],
+                    intent=classification["intent"],
                     entities=entities,
-                    from_address=email['from_address'],
-                    subject=email['subject'],
+                    from_address=email["from_address"],
+                    subject=email["subject"],
                     quote_data=quote_data,
                     business_info=business_info,
                     brand_voice=brand_voice,
-                    client=client
+                    client=client,
                 )
 
             response_repo.create_response(email_id, response_text)
             email_repo.mark_responded(email_id)
-            logger.info(f"  Response generated and stored")
+            logger.info("  Response generated and stored")
 
-            results['processed'] += 1
-            results['details'].append({
-                'email_id': email_id,
-                'intent': classification['intent'],
-                'entities_count': len(entities),
-                'quote': quote_data['total'] if quote_data else None
-            })
+            results["processed"] += 1
+            results["details"].append(
+                {
+                    "email_id": email_id,
+                    "intent": classification["intent"],
+                    "entities_count": len(entities),
+                    "quote": quote_data["total"] if quote_data else None,
+                }
+            )
 
         except Exception as e:
             logger.error(f"Failed to process email {email_id}: {e}")
-            results['errors'] += 1
+            results["errors"] += 1
 
     return results
 
@@ -305,7 +277,7 @@ def process_emails_with_ai(
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description='Fetch emails from Gmail and store in database',
+        description="Fetch emails from Gmail and store in database",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -314,39 +286,15 @@ Examples:
   python scripts/fetch_emails.py --process          # Fetch and run AI pipeline
   python scripts/fetch_emails.py --query "subject:quote"  # Fetch with query
   python scripts/fetch_emails.py --dry-run          # Preview without saving
-        """
+        """,
     )
 
-    parser.add_argument(
-        '--max', '-m',
-        type=int,
-        default=10,
-        help='Maximum emails to fetch (default: 10)'
-    )
-    parser.add_argument(
-        '--query', '-q',
-        help='Gmail search query (e.g., "subject:quote", "from:customer@example.com")'
-    )
-    parser.add_argument(
-        '--process', '-p',
-        action='store_true',
-        help='Process fetched emails through AI pipeline'
-    )
-    parser.add_argument(
-        '--skip-ai',
-        action='store_true',
-        help='Skip AI calls when processing (use mock data)'
-    )
-    parser.add_argument(
-        '--no-mark-read',
-        action='store_true',
-        help='Do not mark emails as read in Gmail'
-    )
-    parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='Preview only, do not save to database'
-    )
+    parser.add_argument("--max", "-m", type=int, default=10, help="Maximum emails to fetch (default: 10)")
+    parser.add_argument("--query", "-q", help='Gmail search query (e.g., "subject:quote", "from:customer@example.com")')
+    parser.add_argument("--process", "-p", action="store_true", help="Process fetched emails through AI pipeline")
+    parser.add_argument("--skip-ai", action="store_true", help="Skip AI calls when processing (use mock data)")
+    parser.add_argument("--no-mark-read", action="store_true", help="Do not mark emails as read in Gmail")
+    parser.add_argument("--dry-run", action="store_true", help="Preview only, do not save to database")
 
     args = parser.parse_args()
 
@@ -368,7 +316,7 @@ Examples:
     # Initialize database
     try:
         db = Database(settings.database.dsn)
-        print(f"✓ Connected to database")
+        print("✓ Connected to database")
     except Exception as e:
         print(f"\n❌ Database connection failed: {e}")
         print("Make sure PostgreSQL is running (docker-compose up -d)")
@@ -379,17 +327,9 @@ Examples:
     if args.query:
         print(f"Query: {args.query}")
 
-    service = EmailIngestionService(
-        gmail_client=gmail,
-        db=db,
-        mark_as_read=not args.no_mark_read
-    )
+    service = EmailIngestionService(gmail_client=gmail, db=db, mark_as_read=not args.no_mark_read)
 
-    email_ids = service.fetch_and_store(
-        max_results=args.max,
-        query=args.query,
-        dry_run=args.dry_run
-    )
+    email_ids = service.fetch_and_store(max_results=args.max, query=args.query, dry_run=args.dry_run)
 
     if args.dry_run:
         print("\n[DRY RUN] No emails were saved to database")
@@ -404,19 +344,15 @@ Examples:
         print("Processing through AI pipeline...")
         print("-" * 40)
 
-        results = process_emails_with_ai(
-            email_ids=email_ids,
-            db=db,
-            skip_ai=args.skip_ai
-        )
+        results = process_emails_with_ai(email_ids=email_ids, db=db, skip_ai=args.skip_ai)
 
         print(f"\n✓ Processed: {results['processed']}")
         print(f"  Errors: {results['errors']}")
 
-        if results['details']:
+        if results["details"]:
             print("\nProcessing summary:")
-            for detail in results['details']:
-                quote_str = f"${detail['quote']:.2f}" if detail['quote'] else "N/A"
+            for detail in results["details"]:
+                quote_str = f"${detail['quote']:.2f}" if detail["quote"] else "N/A"
                 print(
                     f"  Email {detail['email_id']}: "
                     f"{detail['intent']} | "
@@ -434,5 +370,5 @@ Examples:
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

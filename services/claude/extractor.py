@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 from anthropic import Anthropic
 
 from config.settings import settings
+
 from .client import get_claude_client
 
 logger = logging.getLogger(__name__)
@@ -82,11 +83,7 @@ Only include entities that are clearly present in the email. Respond ONLY with t
 
 
 def extract_entities(
-    body: str,
-    intent: str,
-    from_address: str = "",
-    subject: str = "",
-    client: Optional[Anthropic] = None
+    body: str, intent: str, from_address: str = "", subject: str = "", client: Optional[Anthropic] = None
 ) -> List[Dict[str, Any]]:
     """
     Extract relevant entities from an email using Claude API.
@@ -105,19 +102,14 @@ def extract_entities(
         client = get_claude_client()
 
     prompt = EXTRACTION_PROMPT.format(
-        intent=intent,
-        from_address=from_address or "unknown",
-        subject=subject or "(No Subject)",
-        body=body or "(Empty)"
+        intent=intent, from_address=from_address or "unknown", subject=subject or "(No Subject)", body=body or "(Empty)"
     )
 
     logger.debug(f"Extracting entities for {intent} email...")
 
     try:
         response = client.messages.create(
-            model=settings.claude.model,
-            max_tokens=1500,
-            messages=[{"role": "user", "content": prompt}]
+            model=settings.claude.model, max_tokens=1500, messages=[{"role": "user", "content": prompt}]
         )
 
         response_text = response.content[0].text.strip()
@@ -135,7 +127,7 @@ def extract_entities(
             {
                 "type": e.get("type", "unknown"),
                 "value": str(e.get("value", "")),
-                "confidence": float(e.get("confidence", 0.5))
+                "confidence": float(e.get("confidence", 0.5)),
             }
             for e in entities
         ]

@@ -9,11 +9,12 @@ Generates professional responses based on:
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from anthropic import Anthropic
 
 from config.settings import settings
+
 from .client import get_claude_client
 
 logger = logging.getLogger(__name__)
@@ -79,7 +80,7 @@ def _get_intent_instruction(intent: str) -> str:
         "booking_request": "Confirms availability and provides booking confirmation or asks for any missing details needed to complete the booking",
         "rescheduling": "Confirms the rescheduling request and provides alternative dates if the requested date isn't available",
         "complaint": "Expresses genuine empathy, takes responsibility appropriately, and offers a concrete resolution",
-        "general_inquiry": "Answers their questions thoroughly and offers additional helpful information"
+        "general_inquiry": "Answers their questions thoroughly and offers additional helpful information",
     }
     return instructions.get(intent, "Addresses their needs appropriately")
 
@@ -110,7 +111,7 @@ def generate_response(
     quote_data: Optional[Dict] = None,
     business_info: Optional[Dict] = None,
     brand_voice: Optional[Dict] = None,
-    client: Optional[Anthropic] = None
+    client: Optional[Anthropic] = None,
 ) -> str:
     """
     Generate a professional email response using Claude API.
@@ -139,8 +140,8 @@ def generate_response(
         brand_voice = DEFAULT_BRAND_VOICE
 
     # Format brand guidelines
-    tone = brand_voice.get('tone', 'professional and friendly')
-    signature = brand_voice.get('signature', 'Best regards,\nThe Team')
+    tone = brand_voice.get("tone", "professional and friendly")
+    signature = brand_voice.get("signature", "Best regards,\nThe Team")
     brand_guidelines = f"- Tone: {tone}\n- Signature to use:\n{signature}"
 
     prompt = RESPONSE_PROMPT.format(
@@ -152,7 +153,7 @@ def generate_response(
         from_address=from_address or "unknown",
         subject=subject or "(No Subject)",
         body=body or "(Empty)",
-        intent_specific_instruction=_get_intent_instruction(intent)
+        intent_specific_instruction=_get_intent_instruction(intent),
     )
 
     logger.debug(f"Generating response for {intent} email...")
@@ -161,7 +162,7 @@ def generate_response(
         response = client.messages.create(
             model=settings.claude.model,
             max_tokens=settings.claude.max_tokens,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
         )
 
         response_text = response.content[0].text.strip()

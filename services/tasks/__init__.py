@@ -9,27 +9,26 @@ Contains asynchronous tasks for:
 - Google Calendar event creation and sync
 """
 
-from .email_tasks import (
-    fetch_emails_task,
-    process_pending_emails_task,
-    process_single_email_task,
-    get_email_repository,
-    get_repositories,
-)
-
 from .calendar_tasks import (
     create_calendar_event_task,
     force_create_calendar_event_task,
     sync_calendar_events_task,
 )
+from .email_tasks import (
+    fetch_emails_task,
+    get_email_repository,
+    get_repositories,
+    process_pending_emails_task,
+    process_single_email_task,
+)
 
 __all__ = [
-    'fetch_emails_task',
-    'process_pending_emails_task',
-    'process_single_email_task',
-    'get_email_repository',
-    'get_repositories',
-    'create_calendar_event_task',
-    'force_create_calendar_event_task',
-    'sync_calendar_events_task',
+    "fetch_emails_task",
+    "process_pending_emails_task",
+    "process_single_email_task",
+    "get_email_repository",
+    "get_repositories",
+    "create_calendar_event_task",
+    "force_create_calendar_event_task",
+    "sync_calendar_events_task",
 ]

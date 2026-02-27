@@ -22,17 +22,13 @@ from pathlib import Path
 from typing import List, Optional
 
 import psycopg2
-from psycopg2 import sql
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from config.settings import settings
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -113,9 +109,9 @@ class MigrationRunner:
         Returns:
             List of paths to .sql files, sorted alphabetically
         """
-        files = sorted(self.migrations_dir.glob('*.sql'))
+        files = sorted(self.migrations_dir.glob("*.sql"))
         # Exclude any rollback files
-        return [f for f in files if 'rollback' not in f.name.lower()]
+        return [f for f in files if "rollback" not in f.name.lower()]
 
     def get_applied_migrations(self) -> List[dict]:
         """
@@ -130,10 +126,7 @@ class MigrationRunner:
             with conn.cursor() as cur:
                 cur.execute(GET_APPLIED_MIGRATIONS)
                 results = cur.fetchall()
-                return [
-                    {'filename': r[0], 'applied_at': r[1]}
-                    for r in results
-                ]
+                return [{"filename": r[0], "applied_at": r[1]} for r in results]
         finally:
             conn.close()
 
@@ -170,7 +163,7 @@ class MigrationRunner:
         """
         logger.info(f"Running migration: {file_path.name}")
 
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             sql_content = f.read()
 
         conn = self._get_connection()
@@ -271,29 +264,19 @@ class MigrationRunner:
 def main():
     """Command-line entry point."""
     parser = argparse.ArgumentParser(
-        description='Database migration runner',
+        description="Database migration runner",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   python -m database.migrations.migrate           # Run all pending migrations
   python -m database.migrations.migrate --status  # Show migration status
   python -m database.migrations.migrate --file 001_initial_schema.sql
-        """
+        """,
     )
 
-    parser.add_argument(
-        '--file', '-f',
-        help='Run a specific migration file'
-    )
-    parser.add_argument(
-        '--status', '-s',
-        action='store_true',
-        help='Show migration status'
-    )
-    parser.add_argument(
-        '--dsn',
-        help='Database connection string (overrides settings)'
-    )
+    parser.add_argument("--file", "-f", help="Run a specific migration file")
+    parser.add_argument("--status", "-s", action="store_true", help="Show migration status")
+    parser.add_argument("--dsn", help="Database connection string (overrides settings)")
 
     args = parser.parse_args()
 
@@ -311,5 +294,5 @@ Examples:
     return 0 if success else 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

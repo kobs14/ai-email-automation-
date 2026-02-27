@@ -20,23 +20,26 @@ def create_app() -> Flask:
     settings = get_settings()
 
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = settings.flask.secret_key
-    app.config['JSON_SORT_KEYS'] = False
+    app.config["SECRET_KEY"] = settings.flask.secret_key
+    app.config["JSON_SORT_KEYS"] = False
 
     # CORS configuration
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": [settings.flask.frontend_url],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True,
-        }
-    })
+    CORS(
+        app,
+        resources={
+            r"/api/*": {
+                "origins": [settings.flask.frontend_url],
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"],
+                "supports_credentials": True,
+            }
+        },
+    )
 
     # Register middleware
     from backend.middleware.error_handlers import register_error_handlers
-    from backend.middleware.request_logger import register_request_logger
     from backend.middleware.rate_limiter import register_rate_limiter
+    from backend.middleware.request_logger import register_request_logger
 
     register_error_handlers(app)
     register_request_logger(app)
@@ -44,6 +47,7 @@ def create_app() -> Flask:
 
     # Register blueprints
     from backend.routes import ALL_BLUEPRINTS
+
     for bp in ALL_BLUEPRINTS:
         app.register_blueprint(bp)
 

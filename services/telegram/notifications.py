@@ -7,6 +7,7 @@ for various email processing events.
 
 import logging
 import traceback
+from datetime import datetime
 from typing import Optional
 
 import telegram
@@ -33,11 +34,11 @@ def _truncate_to_lines(text: str, max_lines: int = 4, max_chars: int = 300) -> s
         Truncated text with '...' if truncated
     """
     if not text:
-        return ''
+        return ""
 
-    lines = text.split('\n')
+    lines = text.split("\n")
     truncated_lines = lines[:max_lines]
-    result = '\n'.join(truncated_lines)
+    result = "\n".join(truncated_lines)
 
     # Also apply character limit
     if len(result) > max_chars:
@@ -45,7 +46,7 @@ def _truncate_to_lines(text: str, max_lines: int = 4, max_chars: int = 300) -> s
 
     # Add ellipsis if truncated
     if len(lines) > max_lines or len(text) > len(result):
-        result = result.rstrip() + '\n...'
+        result = result.rstrip() + "\n..."
 
     return result
 
@@ -59,7 +60,7 @@ def get_bot() -> Optional[telegram.Bot]:
     """
     token = settings.telegram.bot_token
 
-    if not token or token == 'your_bot_token_from_botfather':
+    if not token or token == "your_bot_token_from_botfather":
         logger.warning("TELEGRAM_BOT_TOKEN not configured")
         return None
 
@@ -144,20 +145,14 @@ def send_message_sync(
         loop = asyncio.get_event_loop()
         if loop.is_running():
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(
-                    asyncio.run,
-                    send_message_async(text, reply_markup, parse_mode)
-                )
+                future = executor.submit(asyncio.run, send_message_async(text, reply_markup, parse_mode))
                 return future.result(timeout=30)
         else:
-            return loop.run_until_complete(
-                send_message_async(text, reply_markup, parse_mode)
-            )
+            return loop.run_until_complete(send_message_async(text, reply_markup, parse_mode))
     except RuntimeError:
-        return asyncio.run(
-            send_message_async(text, reply_markup, parse_mode)
-        )
+        return asyncio.run(send_message_async(text, reply_markup, parse_mode))
     except Exception as e:
         logger.error(f"Error in send_message_sync: {e}")
         return False
@@ -185,12 +180,12 @@ def notify_new_draft(response_id: int) -> bool:
             logger.warning(f"Response {response_id} not found for notification")
             return False
 
-        from_addr = response.get('from_address', 'Unknown')
-        subject = response.get('subject', 'No Subject')
-        intent = response.get('intent', 'unknown')
-        draft_content = response.get('draft_content', '')
+        from_addr = response.get("from_address", "Unknown")
+        subject = response.get("subject", "No Subject")
+        intent = response.get("intent", "unknown")
+        draft_content = response.get("draft_content", "")
         # Field is aliased as 'original_body' in GET_RESPONSE_WITH_EMAIL query
-        original_body = response.get('original_body') or response.get('body', '')
+        original_body = response.get("original_body") or response.get("body", "")
 
         # Truncate to ~4 lines (roughly 200 chars)
         original_preview = _truncate_to_lines(original_body, max_lines=4)
@@ -213,25 +208,17 @@ def notify_new_draft(response_id: int) -> bool:
 
         # Safety check for message length
         if len(message) > MAX_MESSAGE_LENGTH - 100:
-            message = message[:MAX_MESSAGE_LENGTH - 150] + "\n... (truncated)"
+            message = message[: MAX_MESSAGE_LENGTH - 150] + "\n... (truncated)"
 
         keyboard = [
             [
-                InlineKeyboardButton(
-                    "\u2705 Approve", callback_data=f"approve:{response_id}"
-                ),
-                InlineKeyboardButton(
-                    "\u274c Reject", callback_data=f"reject:{response_id}"
-                ),
+                InlineKeyboardButton("\u2705 Approve", callback_data=f"approve:{response_id}"),
+                InlineKeyboardButton("\u274c Reject", callback_data=f"reject:{response_id}"),
             ],
             [
-                InlineKeyboardButton(
-                    "\u270f\ufe0f Edit", callback_data=f"edit:{response_id}"
-                ),
-                InlineKeyboardButton(
-                    "\U0001f441 View Full", callback_data=f"view:{response_id}"
-                ),
-            ]
+                InlineKeyboardButton("\u270f\ufe0f Edit", callback_data=f"edit:{response_id}"),
+                InlineKeyboardButton("\U0001f441 View Full", callback_data=f"view:{response_id}"),
+            ],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -264,9 +251,9 @@ def notify_send_success(response_id: int) -> bool:
             logger.warning(f"Response {response_id} not found for notification")
             return False
 
-        from_addr = response.get('from_address', 'Unknown')
-        subject = response.get('subject', 'No Subject')
-        sent_message_id = response.get('sent_message_id', 'N/A')
+        from_addr = response.get("from_address", "Unknown")
+        subject = response.get("subject", "No Subject")
+        sent_message_id = response.get("sent_message_id", "N/A")
 
         message = (
             "\u2705 Email Sent Successfully\n\n"
@@ -306,9 +293,9 @@ def notify_send_failure(response_id: int, error: str) -> bool:
             logger.warning(f"Response {response_id} not found for notification")
             return False
 
-        from_addr = response.get('from_address', 'Unknown')
-        subject = response.get('subject', 'No Subject')
-        send_attempts = response.get('send_attempts', 0)
+        from_addr = response.get("from_address", "Unknown")
+        subject = response.get("subject", "No Subject")
+        send_attempts = response.get("send_attempts", 0)
 
         message = (
             "\u274c Email Send Failed\n\n"
@@ -349,14 +336,11 @@ def notify_calendar_created(response_id: int, event_link: str) -> bool:
             logger.warning(f"Response {response_id} not found for calendar notification")
             return False
 
-        from_addr = response.get('from_address', 'Unknown')
-        subject = response.get('subject', 'No Subject')
+        from_addr = response.get("from_address", "Unknown")
+        subject = response.get("subject", "No Subject")
 
         message = (
-            "\U0001f4c5 Calendar Event Created\n\n"
-            f"Response #{response_id}\n"
-            f"Customer: {from_addr}\n"
-            f"Subject: {subject}\n"
+            f"\U0001f4c5 Calendar Event Created\n\nResponse #{response_id}\nCustomer: {from_addr}\nSubject: {subject}\n"
         )
 
         if event_link:
@@ -371,8 +355,8 @@ def notify_calendar_created(response_id: int, event_link: str) -> bool:
 
 def notify_calendar_conflict(
     response_id: int,
-    proposed_start: 'datetime',
-    proposed_end: 'datetime',
+    proposed_start: datetime,
+    proposed_end: datetime,
     conflicts: list,
 ) -> bool:
     """
@@ -399,19 +383,16 @@ def notify_calendar_conflict(
             logger.warning(f"Response {response_id} not found for conflict notification")
             return False
 
-        from_addr = response.get('from_address', 'Unknown')
+        from_addr = response.get("from_address", "Unknown")
 
         # Format proposed time
-        proposed_str = proposed_start.strftime('%A, %b %d at %I:%M %p')
+        proposed_str = proposed_start.strftime("%A, %b %d at %I:%M %p")
 
         # Format conflicts
         conflict_lines = []
         for c in conflicts:
-            conflict_lines.append(
-                f"- \"{c.get('title', 'Untitled')}\" "
-                f"({c.get('start', '?')} - {c.get('end', '?')})"
-            )
-        conflict_text = '\n'.join(conflict_lines)
+            conflict_lines.append(f'- "{c.get("title", "Untitled")}" ({c.get("start", "?")} - {c.get("end", "?")})')
+        conflict_text = "\n".join(conflict_lines)
 
         message = (
             "\u26a0\ufe0f Calendar Conflict Detected\n\n"
@@ -460,11 +441,7 @@ def notify_calendar_failed(response_id: int, error: str) -> bool:
     Returns:
         True if notification was sent successfully
     """
-    message = (
-        "\u274c Calendar Event Failed\n\n"
-        f"Response #{response_id}\n"
-        f"Error: {error[:500]}"
-    )
+    message = f"\u274c Calendar Event Failed\n\nResponse #{response_id}\nError: {error[:500]}"
 
     return send_message_sync(message)
 
@@ -480,20 +457,20 @@ def notify_manual_event_synced(event_details: dict) -> bool:
         True if notification was sent successfully
     """
     try:
-        title = event_details.get('title', 'Untitled')
-        location = event_details.get('location', 'No location')
-        start_time = event_details.get('start_time')
+        title = event_details.get("title", "Untitled")
+        location = event_details.get("location", "No location")
+        start_time = event_details.get("start_time")
 
-        date_str = 'Unknown'
+        date_str = "Unknown"
         if start_time:
-            if hasattr(start_time, 'strftime'):
-                date_str = start_time.strftime('%A, %b %d at %I:%M %p')
+            if hasattr(start_time, "strftime"):
+                date_str = start_time.strftime("%A, %b %d at %I:%M %p")
             else:
                 date_str = str(start_time)
 
-        end_time = event_details.get('end_time')
-        duration_str = ''
-        if start_time and end_time and hasattr(start_time, '__sub__'):
+        end_time = event_details.get("end_time")
+        duration_str = ""
+        if start_time and end_time and hasattr(start_time, "__sub__"):
             duration = end_time - start_time
             hours = duration.total_seconds() / 3600
             duration_str = f"\nDuration: {hours:.1f} hours"
@@ -536,8 +513,8 @@ def notify_new_email_received(email_id: int) -> bool:
             logger.warning(f"Email {email_id} not found for notification")
             return False
 
-        from_addr = email.get('from_address', 'Unknown')
-        subject = email.get('subject', 'No Subject')
+        from_addr = email.get("from_address", "Unknown")
+        subject = email.get("subject", "No Subject")
 
         message = (
             "\U0001f4e5 New Email Received\n\n"
